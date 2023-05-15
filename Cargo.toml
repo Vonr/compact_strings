@@ -1,0 +1,10 @@
+[package]
+name = "compact_strings"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/Vonr/compact_strings"
+repository = "https://github.com/Vonr/compact_strings"
+include = ["src/**/*", "README.md"]
+rust-version = "1.56.1"

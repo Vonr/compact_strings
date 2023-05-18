@@ -8,7 +8,7 @@
 //! # Examples
 //! ```
 //! # use compact_strings::CompactStrings;
-//! let mut cmpstrs = CompactStrings::with_capacity(10);
+//! let mut cmpstrs = CompactStrings::with_capacity(20, 3);
 //!
 //! cmpstrs.push("One".to_string());
 //! cmpstrs.push("Two".to_string());
@@ -33,7 +33,7 @@ use std::ops::Index;
 /// # Examples
 /// ```
 /// # use compact_strings::CompactStrings;
-/// let mut cmpstrs = CompactStrings::with_capacity(10);
+/// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
 ///
 /// cmpstrs.push("One".to_string());
 /// cmpstrs.push("Two".to_string());
@@ -46,8 +46,8 @@ use std::ops::Index;
 /// assert_eq!(cmpstrs.get(2), None);
 /// ```
 pub struct CompactStrings {
-    inner: Vec<u8>,
-    strings: Vec<(usize, usize)>,
+    data: Vec<u8>,
+    meta: Vec<(usize, usize)>,
 }
 
 impl CompactStrings {
@@ -62,25 +62,27 @@ impl CompactStrings {
     /// ```
     pub const fn new() -> Self {
         Self {
-            inner: Vec::new(),
-            strings: Vec::new(),
+            data: Vec::new(),
+            meta: Vec::new(),
         }
     }
 
-    /// Constructs a new, empty [`CompactStrings`] with at least the specified capacity in the inner
-    /// vector where the bytes of the strings are stored.
+    /// Constructs a new, empty [`CompactStrings`] with at least the specified capacities in each
+    /// vector.
     ///
-    /// Note that this does not affect the indices and lengths vectors which store information
-    /// about where each string is stored.
+    /// - `data_capacity`: The capacity of the data vector where the bytes of the strings are stored.
+    /// - `capacity_meta`: The capacity of the meta vector where the starting indices and lengths
+    /// of the strings are stored.
     ///
-    /// The [`CompactStrings`] will be able to hold at least *capacity* bytes worth of strings
-    /// without reallocating the inner vector. This method is allowed to allocate for more bytes
-    /// than *capacity*. If *capacity* is 0, the inner vector will not allocate.
+    /// The [`CompactStrings`] will be able to hold at least *data_capacity* bytes worth of strings
+    /// without reallocating the data vector, and at least *capacity_meta* of starting indices and
+    /// lengths without reallocating the meta vector. This method is allowed to allocate for more bytes
+    /// than the capacities. If a capacity is 0, the vector will not allocate.
     ///
-    /// It is important to note that although the returned vector has the
-    /// minimum *capacity* specified, the inner vector will have a zero *length*.
+    /// It is important to note that although the data and meta vectors have the
+    /// minimum capacities specified, they will have a zero *length*.
     ///
-    /// If it is important to know the exact allocated capacity of the inner vector, always use the
+    /// If it is important to know the exact allocated capacity of the data vector, always use the
     /// [`capacity`] method after construction.
     ///
     /// [`capacity`]: CompactStrings::capacity
@@ -88,15 +90,16 @@ impl CompactStrings {
     /// # Examples
     /// ```
     /// # use compact_strings::CompactStrings;
-    /// let mut cmpstrs = CompactStrings::with_capacity(10);
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     ///
     /// assert_eq!(cmpstrs.len(), 0);
-    /// assert!(cmpstrs.capacity() >= 10);
+    /// assert!(cmpstrs.capacity() >= 20);
+    /// assert!(cmpstrs.capacity_meta() >= 3);
     /// ```
-    pub fn with_capacity(capacity: usize) -> Self {
+    pub fn with_capacity(data_capacity: usize, capacity_meta: usize) -> Self {
         Self {
-            inner: Vec::with_capacity(capacity),
-            strings: Vec::new(),
+            data: Vec::with_capacity(data_capacity),
+            meta: Vec::with_capacity(capacity_meta),
         }
     }
 
@@ -117,8 +120,8 @@ impl CompactStrings {
     /// ```
     pub fn push(&mut self, string: String) {
         let bytes = string.into_bytes();
-        self.strings.push((self.inner.len(), bytes.len()));
-        self.inner.extend_from_slice(&bytes);
+        self.meta.push((self.data.len(), bytes.len()));
+        self.data.extend_from_slice(&bytes);
     }
 
     /// Returns a reference to the string stored in the [`CompactStrings`] at that position.
@@ -137,8 +140,8 @@ impl CompactStrings {
     /// assert_eq!(cmpstrs.get(3), None);
     /// ```
     pub fn get(&self, index: usize) -> Option<&str> {
-        let (start, len) = *self.strings.get(index)?;
-        let bytes = self.inner.get(start..start + len)?;
+        let (start, len) = *self.meta.get(index)?;
+        let bytes = self.data.get(start..start + len)?;
         unsafe { Some(std::str::from_utf8_unchecked(bytes)) }
     }
 
@@ -163,8 +166,8 @@ impl CompactStrings {
     /// }
     /// ```
     pub unsafe fn get_unchecked(&self, index: usize) -> &str {
-        let (start, len) = *self.strings.get_unchecked(index);
-        let bytes = self.inner.get_unchecked(start..start + len);
+        let (start, len) = *self.meta.get_unchecked(index);
+        let bytes = self.data.get_unchecked(start..start + len);
         std::str::from_utf8_unchecked(bytes)
     }
 
@@ -183,7 +186,7 @@ impl CompactStrings {
     /// ```
     #[inline]
     pub fn len(&self) -> usize {
-        self.strings.len()
+        self.meta.len()
     }
 
     /// Returns true if the [`CompactStrings`] contains no strings.
@@ -203,20 +206,40 @@ impl CompactStrings {
         self.len() == 0
     }
 
-    /// Returns the number of bytes the inner vector can store without reallocating.
+    /// Returns the number of bytes the data vector can store without reallocating.
     ///
     /// # Examples
     /// ```
     /// # use compact_strings::CompactStrings;
-    /// let mut cmpstrs = CompactStrings::with_capacity(10);
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     ///
     /// cmpstrs.push("One".to_string());
     ///
-    /// assert!(cmpstrs.capacity() >= 10);
+    /// assert!(cmpstrs.capacity() >= 20);
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
-        self.inner.capacity()
+        self.data.capacity()
+    }
+
+    /// Returns the number of starting indices and lengths can store without reallocating.
+    ///
+    /// # Examples
+    /// ```
+    /// # use compact_strings::CompactStrings;
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
+    ///
+    /// cmpstrs.push("One".to_string());
+    /// cmpstrs.push("Two".to_string());
+    /// cmpstrs.push("Three".to_string());
+    /// assert!(cmpstrs.capacity_meta() >= 3);
+    ///
+    /// cmpstrs.push("Three".to_string());
+    /// assert!(cmpstrs.capacity_meta() > 3);
+    /// ```
+    #[inline]
+    pub fn capacity_meta(&self) -> usize {
+        self.meta.capacity()
     }
 
     /// Clears the [`CompactStrings`], removing all strings.
@@ -236,11 +259,11 @@ impl CompactStrings {
     /// assert!(cmpstrs.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.inner.clear();
-        self.strings.clear();
+        self.data.clear();
+        self.meta.clear();
     }
 
-    /// Shrinks the capacity of the inner vector, which stores the bytes of the held strings, as much as possible.
+    /// Shrinks the capacity of the data vector, which stores the bytes of the held strings, as much as possible.
     ///
     /// It will drop down as close as possible to the length but the allocator
     /// may still inform the vector that there is space for a few more elements.
@@ -248,22 +271,46 @@ impl CompactStrings {
     /// # Examples
     /// ```
     /// # use compact_strings::CompactStrings;
-    /// let mut cmpstrs = CompactStrings::with_capacity(10);
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     ///
     /// cmpstrs.push("One".to_string());
     /// cmpstrs.push("Two".to_string());
     /// cmpstrs.push("Three".to_string());
     ///
-    /// assert!(cmpstrs.capacity() >= 10);
+    /// assert!(cmpstrs.capacity() >= 20);
     /// cmpstrs.shrink_to_fit();
     /// assert!(cmpstrs.capacity() >= 3);
     /// ```
     #[inline]
     pub fn shrink_to_fit(&mut self) {
-        self.inner.shrink_to_fit();
+        self.data.shrink_to_fit();
     }
 
-    /// Shrinks the capacity of the inner vector, which stores the bytes of the held strings, with a lower bound.
+    /// Shrinks the capacity of the info vector, which stores the starting indices and lengths of
+    /// the held strings, as much as possible.
+    ///
+    /// It will drop down as close as possible to the length but the allocator
+    /// may still inform the vector that there is space for a few more elements.
+    ///
+    /// # Examples
+    /// ```
+    /// # use compact_strings::CompactStrings;
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 10);
+    ///
+    /// cmpstrs.push("One".to_string());
+    /// cmpstrs.push("Two".to_string());
+    /// cmpstrs.push("Three".to_string());
+    ///
+    /// assert!(cmpstrs.capacity_meta() >= 10);
+    /// cmpstrs.shrink_to_fit();
+    /// assert!(cmpstrs.capacity_meta() >= 3);
+    /// ```
+    #[inline]
+    pub fn shrink_meta_to_fit(&mut self) {
+        self.meta.shrink_to_fit();
+    }
+
+    /// Shrinks the capacity of the data vector, which stores the bytes of the held strings, with a lower bound.
     ///
     /// The capacity will remain at least as large as both the length and the supplied value.
     ///
@@ -272,32 +319,87 @@ impl CompactStrings {
     /// # Examples
     /// ```
     /// # use compact_strings::CompactStrings;
-    /// let mut cmpstrs = CompactStrings::with_capacity(10);
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 4);
     ///
     /// cmpstrs.push("One".to_string());
     /// cmpstrs.push("Two".to_string());
     /// cmpstrs.push("Three".to_string());
     ///
-    /// assert!(cmpstrs.capacity() >= 10);
+    /// assert!(cmpstrs.capacity() >= 20);
     /// cmpstrs.shrink_to(4);
     /// assert!(cmpstrs.capacity() >= 4);
     /// ```
     #[inline]
     pub fn shrink_to(&mut self, min_capacity: usize) {
-        self.inner.shrink_to(min_capacity);
+        self.data.shrink_to(min_capacity);
+    }
+
+    /// Shrinks the capacity of the meta vector, which starting indices and lengths of the held strings,
+    /// with a lower bound.
+    ///
+    /// The capacity will remain at least as large as both the length and the supplied value.
+    ///
+    /// If the current capacity is less than the lower limit, this is a no-op.
+    ///
+    /// # Examples
+    /// ```
+    /// # use compact_strings::CompactStrings;
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 10);
+    ///
+    /// cmpstrs.push("One".to_string());
+    /// cmpstrs.push("Two".to_string());
+    /// cmpstrs.push("Three".to_string());
+    ///
+    /// assert!(cmpstrs.capacity_meta() >= 10);
+    /// cmpstrs.shrink_meta_to(4);
+    /// assert!(cmpstrs.capacity_meta() >= 4);
+    /// ```
+    #[inline]
+    pub fn shrink_meta_to(&mut self, min_capacity: usize) {
+        self.meta.shrink_to(min_capacity);
     }
 
     /// Removes the data pointing to where the string at the specified index is stored.
     ///
     /// Note that this does not remove the bytes of the string from memory, you may want to use
-    /// [`remove_full`] if you desire that behavior.
+    /// [`remove_full`] if you desire that behavior. This operation is O(n-i) on the meta vector
+    /// and O(1) on the data vector.
     ///
     /// [`remove_full`]: CompactStrings::remove_full
     ///
     /// # Examples
     /// ```
     /// # use compact_strings::CompactStrings;
-    /// let mut cmpstrs = CompactStrings::with_capacity(10);
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
+    ///
+    /// cmpstrs.push("One".to_string());
+    /// cmpstrs.push("Two".to_string());
+    /// cmpstrs.push("Three".to_string());
+    ///
+    /// cmpstrs.ignore(1);
+    ///
+    /// assert_eq!(cmpstrs.get(0), Some("One"));
+    /// assert_eq!(cmpstrs.get(1), Some("Three"));
+    /// assert_eq!(cmpstrs.get(2), None);
+    /// ```
+    pub fn ignore(&mut self, index: usize) {
+        assert!(self.len() > index);
+        self.meta.remove(index);
+    }
+
+    /// Removes the bytes of the string and data pointing to where the string
+    /// at the specified index is stored.
+    ///
+    /// Note that this removes the bytes of the string from memory, you may want to use [`ignore`]
+    /// if you do not desire this behaviour as this is operation is O(n-i) on the data vector
+    /// compared to [`ignore`]'s O(n-i) on the meta vector.
+    ///
+    /// [`ignore`]: CompactStrings::ignore
+    ///
+    /// # Examples
+    /// ```
+    /// # use compact_strings::CompactStrings;
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     ///
     /// cmpstrs.push("One".to_string());
     /// cmpstrs.push("Two".to_string());
@@ -311,47 +413,44 @@ impl CompactStrings {
     /// ```
     pub fn remove(&mut self, index: usize) {
         assert!(self.len() > index);
-        self.strings.remove(index);
+        let (start, len) = self.meta.remove(index);
+        let inner_len = self.data.len();
+        for (idx, _) in self.meta.iter_mut().skip(index) {
+            *idx -= len;
+        }
+        self.data.copy_within(start + len.., start);
+        self.data.truncate(inner_len - len);
     }
 
-    /// Removes the data pointing to where the string at the specified index is stored.
+    /// Returns an iterator over the slice.
     ///
-    /// Note that this also removes the bytes of the string from memory, which requires all bytes
-    /// after the string to be shifted into the empty space, you may want to use [`remove`] if you
-    /// do not desire that behavior.
-    ///
-    /// [`remove`]: CompactStrings::remove
+    /// The iterator yields all items from start to end.
     ///
     /// # Examples
+    ///
     /// ```
     /// # use compact_strings::CompactStrings;
-    /// let mut cmpstrs = CompactStrings::with_capacity(10);
-    ///
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     /// cmpstrs.push("One".to_string());
     /// cmpstrs.push("Two".to_string());
     /// cmpstrs.push("Three".to_string());
+    /// let mut iterator = cmpstrs.iter();
     ///
-    /// cmpstrs.remove_full(1);
-    ///
-    /// assert_eq!(cmpstrs.get(0), Some("One"));
-    /// assert_eq!(cmpstrs.get(1), Some("Three"));
-    /// assert_eq!(cmpstrs.get(2), None);
+    /// assert_eq!(iterator.next(), Some("One"));
+    /// assert_eq!(iterator.next(), Some("Two"));
+    /// assert_eq!(iterator.next(), Some("Three"));
+    /// assert_eq!(iterator.next(), None);
     /// ```
-    pub fn remove_full(&mut self, index: usize) {
-        assert!(self.len() > index);
-        let (start, len) = self.strings.remove(index);
-        let inner_len = self.inner.len();
-        for (idx, _) in self.strings.iter_mut().skip(index) {
-            *idx -= len;
-        }
-        self.inner.copy_within(start + len.., start);
-        self.inner.truncate(inner_len - len);
+    #[inline]
+    pub const fn iter(&self) -> Iter<'_> {
+        Iter::new(self)
     }
 }
 
 impl Index<usize> for CompactStrings {
     type Output = str;
 
+    #[inline]
     fn index(&self, index: usize) -> &Self::Output {
         self.get(index).unwrap()
     }
@@ -373,12 +472,19 @@ impl Index<usize> for CompactStrings {
 /// assert_eq!(iter.next(), Some("Three"));
 /// assert_eq!(iter.next(), None);
 /// ```
-pub struct CompactStringIterator<'a> {
+pub struct Iter<'a> {
     inner: &'a CompactStrings,
     index: usize,
 }
 
-impl<'a> Iterator for CompactStringIterator<'a> {
+impl<'a> Iter<'a> {
+    #[inline]
+    pub const fn new(inner: &'a CompactStrings) -> Self {
+        Self { inner, index: 0 }
+    }
+}
+
+impl<'a> Iterator for Iter<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -392,20 +498,17 @@ impl<'a> Iterator for CompactStringIterator<'a> {
 impl<'a> IntoIterator for &'a CompactStrings {
     type Item = &'a str;
 
-    type IntoIter = CompactStringIterator<'a>;
+    type IntoIter = Iter<'a>;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter {
-            inner: self,
-            index: 0,
-        }
+        Self::IntoIter::new(self)
     }
 }
 
-impl ExactSizeIterator for CompactStringIterator<'_> {
+impl ExactSizeIterator for Iter<'_> {
     #[inline]
     fn len(&self) -> usize {
-        self.inner.strings.len()
+        self.inner.meta.len()
     }
 }

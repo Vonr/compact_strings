@@ -244,7 +244,7 @@ impl CompactStrings {
 
     /// Clears the [`CompactStrings`], removing all strings.
     ///
-    /// Note that this method has no effect on the allocated capacity of the vector.
+    /// Note that this method has no effect on the allocated capacity of the vectors.
     ///
     /// # Examples
     /// ```
@@ -361,11 +361,16 @@ impl CompactStrings {
 
     /// Removes the data pointing to where the string at the specified index is stored.
     ///
-    /// Note that this does not remove the bytes of the string from memory, you may want to use
-    /// [`remove_full`] if you desire that behavior. This operation is O(n-i) on the meta vector
-    /// and O(1) on the data vector.
+    /// Note: This does not remove the bytes of the string from memory, you may want to use
+    /// [`remove`] or [`swap_remove`] if you desire that behavior.
     ///
-    /// [`remove_full`]: CompactStrings::remove_full
+    /// Note: Because this shifts over the remaining elements in the meta vector, it has a
+    /// worst-case performance of *O*(*n*). If you don't need the order of elements
+    /// to be preserved, use [`swap_ignore`] instead.
+    ///
+    /// [`remove`]: CompactStrings::remove
+    /// [`swap_remove`]: CompactStrings::swap_remove
+    /// [`swap_ignore`]: CompactStrings::swap_ignore
     ///
     /// # Examples
     /// ```
@@ -387,14 +392,59 @@ impl CompactStrings {
         self.meta.remove(index);
     }
 
-    /// Removes the bytes of the string and data pointing to where the string
-    /// at the specified index is stored.
+    /// Removes the data pointing to where the string at the specified index is stored.
     ///
-    /// Note that this removes the bytes of the string from memory, you may want to use [`ignore`]
-    /// if you do not desire this behaviour as this is operation is O(n-i) on the data vector
-    /// compared to [`ignore`]'s O(n-i) on the meta vector.
+    /// The removed element is replaced by the last element of the meta vector.
     ///
+    /// Note that this does not remove the bytes of the string from memory, you may want to use
+    /// [`remove`] or [`swap_remove`] if you desire that behavior. This operation is O(1) on both
+    /// the meta and data vectors
+    ///
+    /// This does not preserve ordering, but is *O*(1) on the meta vector.
+    /// If you need to preserve the element order, use [`ignore`] instead.
+    ///
+    /// [`remove`]: CompactStrings::remove
+    /// [`swap_remove`]: CompactStrings::swap_remove
     /// [`ignore`]: CompactStrings::ignore
+    ///
+    /// # Examples
+    /// ```
+    /// # use compact_strings::CompactStrings;
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
+    ///
+    /// cmpstrs.push("One".to_string());
+    /// cmpstrs.push("Two".to_string());
+    /// cmpstrs.push("Three".to_string());
+    ///
+    /// cmpstrs.swap_ignore(0);
+    ///
+    /// assert_eq!(cmpstrs.get(0), Some("Three"));
+    /// assert_eq!(cmpstrs.get(1), Some("Two"));
+    /// assert_eq!(cmpstrs.get(2), None);
+    /// ```
+    pub fn swap_ignore(&mut self, index: usize) {
+        assert!(self.len() > index);
+        self.meta.swap_remove(index);
+    }
+
+    /// Removes the bytes of the string and data pointing to the string is stored.
+    ///
+    /// Note: This does not shrink the vectors where the bytes of the string and data to the string
+    /// are stored. You may shrink the data vector with [`shrink_to`] and [`shrink_to_fit`] and the
+    /// meta vector with [`shrink_meta_to`] and [`shrink_meta_to_fit`].
+    ///
+    /// Note: Because this shifts over the remaining elements in both data and meta vectors, it
+    /// has a worst-case performance of *O*(*n*). If you don't need the order of elements
+    /// to be preserved, use [`swap_remove`] instead. If you don't need the bytes of the string to
+    /// be removed, use [`ignore`] or [`swap_ignore`] instead.
+    ///
+    /// [`shrink_to`]: CompactStrings::shrink_to
+    /// [`shrink_to_fit`]: CompactStrings::shrink_to_fit
+    /// [`shrink_meta_to`]: CompactStrings::shrink_meta_to
+    /// [`shrink_meta_to_fit`]: CompactStrings::shrink_meta_to_fit
+    /// [`swap_remove`]: CompactStrings::swap_remove
+    /// [`ignore`]: CompactStrings::ignore
+    /// [`swap_ignore`]: CompactStrings::swap_ignore
     ///
     /// # Examples
     /// ```
@@ -414,6 +464,53 @@ impl CompactStrings {
     pub fn remove(&mut self, index: usize) {
         assert!(self.len() > index);
         let (start, len) = self.meta.remove(index);
+        let inner_len = self.data.len();
+        for (idx, _) in self.meta.iter_mut().skip(index) {
+            *idx -= len;
+        }
+        self.data.copy_within(start + len.., start);
+        self.data.truncate(inner_len - len);
+    }
+
+    /// Removes the bytes of the string and data pointing to the string is stored.
+    ///
+    /// Note: This does not shrink the vectors where the bytes of the string and data to the string
+    /// are stored. You may shrink the data vector with [`shrink_to`] and [`shrink_to_fit`] and the
+    /// meta vector with [`shrink_meta_to`] and [`shrink_meta_to_fit`].
+    ///
+    /// This does not preserve ordering, but is *O*(1) on the meta vector.
+    /// It is still at worst *O*(*n*) on the data vector as there is no guarantee that the last
+    /// string can fit perfectly in the empty space created. This will not be attempted even if
+    /// possible as it is unlikely for many cases. Such a swap could also be done if the last
+    /// string is of a lower length than the removed string, but doing so wastes space that
+    /// the shrinking methods do not account for.
+    /// If you need to preserve the element order, use [`ignore`] instead.
+    ///
+    /// [`shrink_to`]: CompactStrings::shrink_to
+    /// [`shrink_to_fit`]: CompactStrings::shrink_to_fit
+    /// [`shrink_meta_to`]: CompactStrings::shrink_meta_to
+    /// [`shrink_meta_to_fit`]: CompactStrings::shrink_meta_to_fit
+    /// [`ignore`]: CompactStrings::ignore
+    /// [`swap_ignore`]: CompactStrings::swap_ignore
+    ///
+    /// # Examples
+    /// ```
+    /// # use compact_strings::CompactStrings;
+    /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
+    ///
+    /// cmpstrs.push("One".to_string());
+    /// cmpstrs.push("Two".to_string());
+    /// cmpstrs.push("Three".to_string());
+    ///
+    /// cmpstrs.swap_remove(0);
+    ///
+    /// assert_eq!(cmpstrs.get(0), Some("Three"));
+    /// assert_eq!(cmpstrs.get(1), Some("Two"));
+    /// assert_eq!(cmpstrs.get(2), None);
+    /// ```
+    pub fn swap_remove(&mut self, index: usize) {
+        assert!(self.len() > index);
+        let (start, len) = self.meta.swap_remove(index);
         let inner_len = self.data.len();
         for (idx, _) in self.meta.iter_mut().skip(index) {
             *idx -= len;

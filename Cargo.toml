@@ -1,6 +1,6 @@
 [package]
 name = "compact_strings"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2021"
 description = "A cache-friendly but limited representation of a list of strings."
 license = "MIT"
@@ -9,3 +9,10 @@ homepage = "https://github.com/Vonr/compact_strings"
 repository = "https://github.com/Vonr/compact_strings"
 include = ["src/**/*", "README.md"]
 rust-version = "1.56.1"
+
+[dev-dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
+[[bench]]
+name = "benchmarks"
+harness = false

@@ -19,3 +19,8 @@ Limitations include being unable to mutate strings stored in the vector.
 
 This could be worked around with a limited API for mutation, but the cost of
 moving the rest of the bytes will be much higher than with a `Vec<String>`.
+
+## Benchmarks
+
+Some benchmarks of operations expected to perform vastly differently from a
+`Vec<String>` have been benchmarked, you can view them in [here](benches/RESULTS.md)

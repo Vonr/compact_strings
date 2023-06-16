@@ -10,9 +10,9 @@
 //! # use compact_strings::CompactStrings;
 //! let mut cmpstrs = CompactStrings::with_capacity(20, 3);
 //!
-//! cmpstrs.push("One".to_string());
-//! cmpstrs.push("Two".to_string());
-//! cmpstrs.push("Three".to_string());
+//! cmpstrs.push("One");
+//! cmpstrs.push("Two");
+//! cmpstrs.push("Three");
 //!
 //! cmpstrs.remove(1);
 //!
@@ -21,7 +21,7 @@
 //! assert_eq!(cmpstrs.get(2), None);
 //! ```
 
-use std::ops::Index;
+use std::ops::{Deref, Index};
 
 /// A cache-friendly but limited representation of a list of strings.
 ///
@@ -35,9 +35,9 @@ use std::ops::Index;
 /// # use compact_strings::CompactStrings;
 /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
 ///
-/// cmpstrs.push("One".to_string());
-/// cmpstrs.push("Two".to_string());
-/// cmpstrs.push("Three".to_string());
+/// cmpstrs.push("One");
+/// cmpstrs.push("Two");
+/// cmpstrs.push("Three");
 ///
 /// cmpstrs.remove(1);
 ///
@@ -109,19 +109,22 @@ impl CompactStrings {
     /// ```
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::new();
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// assert_eq!(cmpstrs.get(0), Some("One"));
     /// assert_eq!(cmpstrs.get(1), Some("Two"));
     /// assert_eq!(cmpstrs.get(2), Some("Three"));
     /// assert_eq!(cmpstrs.get(3), None);
     /// ```
-    pub fn push(&mut self, string: String) {
-        let bytes = string.into_bytes();
+    pub fn push<S>(&mut self, string: S)
+    where
+        S: Deref<Target = str>,
+    {
+        let bytes = string.as_bytes();
         self.meta.push((self.data.len(), bytes.len()));
-        self.data.extend_from_slice(&bytes);
+        self.data.extend_from_slice(bytes);
     }
 
     /// Returns a reference to the string stored in the [`CompactStrings`] at that position.
@@ -130,9 +133,9 @@ impl CompactStrings {
     /// ```
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::new();
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// assert_eq!(cmpstrs.get(0), Some("One"));
     /// assert_eq!(cmpstrs.get(1), Some("Two"));
@@ -155,9 +158,9 @@ impl CompactStrings {
     /// ```
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::new();
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// unsafe {
     ///     assert_eq!(cmpstrs.get_unchecked(0), "One");
@@ -178,9 +181,9 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::new();
     ///
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// assert_eq!(cmpstrs.len(), 3);
     /// ```
@@ -197,7 +200,7 @@ impl CompactStrings {
     /// let mut cmpstrs = CompactStrings::new();
     /// assert!(cmpstrs.is_empty());
     ///
-    /// cmpstrs.push("One".to_string());
+    /// cmpstrs.push("One");
     ///
     /// assert!(!cmpstrs.is_empty());
     /// ```
@@ -213,7 +216,7 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     ///
-    /// cmpstrs.push("One".to_string());
+    /// cmpstrs.push("One");
     ///
     /// assert!(cmpstrs.capacity() >= 20);
     /// ```
@@ -229,12 +232,12 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     ///
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     /// assert!(cmpstrs.capacity_meta() >= 3);
     ///
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("Three");
     /// assert!(cmpstrs.capacity_meta() > 3);
     /// ```
     #[inline]
@@ -251,9 +254,9 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::new();
     ///
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     /// cmpstrs.clear();
     ///
     /// assert!(cmpstrs.is_empty());
@@ -273,9 +276,9 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     ///
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// assert!(cmpstrs.capacity() >= 20);
     /// cmpstrs.shrink_to_fit();
@@ -297,9 +300,9 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::with_capacity(20, 10);
     ///
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// assert!(cmpstrs.capacity_meta() >= 10);
     /// cmpstrs.shrink_to_fit();
@@ -321,9 +324,9 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::with_capacity(20, 4);
     ///
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// assert!(cmpstrs.capacity() >= 20);
     /// cmpstrs.shrink_to(4);
@@ -346,9 +349,9 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::with_capacity(20, 10);
     ///
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// assert!(cmpstrs.capacity_meta() >= 10);
     /// cmpstrs.shrink_meta_to(4);
@@ -377,9 +380,9 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     ///
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// cmpstrs.ignore(1);
     ///
@@ -412,9 +415,9 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     ///
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// cmpstrs.swap_ignore(0);
     ///
@@ -451,9 +454,9 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     ///
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// cmpstrs.remove(1);
     ///
@@ -498,9 +501,9 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
     ///
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
     /// cmpstrs.swap_remove(0);
     ///
@@ -528,9 +531,9 @@ impl CompactStrings {
     /// ```
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::with_capacity(20, 3);
-    /// cmpstrs.push("One".to_string());
-    /// cmpstrs.push("Two".to_string());
-    /// cmpstrs.push("Three".to_string());
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     /// let mut iterator = cmpstrs.iter();
     ///
     /// assert_eq!(iterator.next(), Some("One"));
@@ -559,9 +562,9 @@ impl Index<usize> for CompactStrings {
 /// ```
 /// # use compact_strings::CompactStrings;
 /// let mut cmpstrs = CompactStrings::new();
-/// cmpstrs.push("One".to_string());
-/// cmpstrs.push("Two".to_string());
-/// cmpstrs.push("Three".to_string());
+/// cmpstrs.push("One");
+/// cmpstrs.push("Two");
+/// cmpstrs.push("Three");
 ///
 /// let mut iter = cmpstrs.into_iter();
 /// assert_eq!(iter.next(), Some("One"));
@@ -606,6 +609,6 @@ impl<'a> IntoIterator for &'a CompactStrings {
 impl ExactSizeIterator for Iter<'_> {
     #[inline]
     fn len(&self) -> usize {
-        self.inner.meta.len()
+        self.inner.meta.len() - self.index
     }
 }

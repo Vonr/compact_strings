@@ -3,7 +3,7 @@ use core::{
     ops::{Deref, Index},
 };
 
-use crate::CompactBytestrings;
+use crate::{metadata::Metadata, CompactBytestrings};
 
 /// A cache-friendly but limited representation of a list of strings.
 ///
@@ -499,7 +499,7 @@ impl CompactStrings {
     /// assert_eq!(iterator.next(), None);
     /// ```
     #[inline]
-    pub const fn iter(&self) -> Iter<'_> {
+    pub fn iter(&self) -> Iter<'_> {
         Iter::new(self)
     }
 }
@@ -566,13 +566,16 @@ impl Index<usize> for CompactStrings {
 /// ```
 pub struct Iter<'a> {
     inner: &'a CompactStrings,
-    index: usize,
+    iter: core::slice::Iter<'a, Metadata>,
 }
 
 impl<'a> Iter<'a> {
     #[inline]
-    pub const fn new(inner: &'a CompactStrings) -> Self {
-        Self { inner, index: 0 }
+    pub fn new(inner: &'a CompactStrings) -> Self {
+        Self {
+            inner,
+            iter: inner.0.meta.iter(),
+        }
     }
 }
 
@@ -580,23 +583,37 @@ impl<'a> Iterator for Iter<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let out = self.inner.get(self.index);
-        self.index += 1;
+        let (start, len) = self.iter.next()?.as_tuple();
 
-        out
+        unsafe {
+            Some(core::str::from_utf8_unchecked(
+                self.inner.0.data.get_unchecked(start..start + len),
+            ))
+        }
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.inner.len().saturating_sub(self.index);
-        (len, Some(len))
+        self.iter.size_hint()
+    }
+}
+
+impl<'a> DoubleEndedIterator for Iter<'a> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let (start, len) = self.iter.next_back()?.as_tuple();
+
+        unsafe {
+            Some(core::str::from_utf8_unchecked(
+                self.inner.0.data.get_unchecked(start..start + len),
+            ))
+        }
     }
 }
 
 impl ExactSizeIterator for Iter<'_> {
     #[inline]
     fn len(&self) -> usize {
-        self.inner.len().saturating_sub(self.index)
+        self.iter.len()
     }
 }
 
@@ -625,11 +642,6 @@ where
         let mut out = CompactStrings::with_capacity(0, meta_capacity);
         for s in iter {
             out.push(s);
-        }
-
-        out.shrink_meta_to_fit();
-        if meta_capacity != 0 {
-            out.shrink_to_fit();
         }
 
         out
@@ -682,4 +694,82 @@ mod tests {
         let _ = iter.next();
         assert_eq!(iter.len(), 0);
     }
+
+    #[test]
+    fn double_ended_iterator() {
+        let mut cmpbytes = CompactStrings::new();
+
+        cmpbytes.push("One");
+        cmpbytes.push("Two");
+        cmpbytes.push("Three");
+        cmpbytes.push("Four");
+
+        let mut iter = cmpbytes.iter();
+        assert_eq!(iter.next(), Some("One"));
+        assert_eq!(iter.next_back(), Some("Four"));
+        assert_eq!(iter.next(), Some("Two"));
+        assert_eq!(iter.next_back(), Some("Three"));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
+    }
 }
+
+#[cfg(feature = "serde")]
+mod serde {
+    use serde::{
+        de::{SeqAccess, Visitor},
+        ser::SerializeSeq,
+        Deserialize, Deserializer, Serialize,
+    };
+
+    use crate::CompactStrings;
+
+    impl Serialize for CompactStrings {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let mut seq = serializer.serialize_seq(Some(self.len()))?;
+            for bstr in self {
+                seq.serialize_element(bstr)?;
+            }
+            seq.end()
+        }
+    }
+
+    impl<'de> Deserialize<'de> for CompactStrings {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            deserializer.deserialize_seq(CompactStringsVisitor)
+        }
+    }
+
+    struct CompactStringsVisitor;
+
+    impl<'de> Visitor<'de> for CompactStringsVisitor {
+        type Value = CompactStrings;
+
+        fn expecting(&self, formatter: &mut alloc::fmt::Formatter) -> alloc::fmt::Result {
+            formatter.write_str("an array of strings")
+        }
+
+        #[inline]
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut out = CompactStrings::with_capacity(0, seq.size_hint().unwrap_or_default());
+            while let Some(str) = seq.next_element::<&str>()? {
+                out.push(str);
+            }
+
+            Ok(out)
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(feature = "serde", allow(unused_imports))]
+pub use self::serde::*;

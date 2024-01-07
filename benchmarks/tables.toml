@@ -1,0 +1,57 @@
+[top_comments]
+Overview = """
+Only a few operations that are thought to have significant differences in
+performance from their `Vec` equivalents are benchmarked and shown here.
+
+The benchmark itself uses quite naive testing methods and are by no means
+perfect. For example, the removal benchmarks also include the timing to
+re-add elements to prevent the benchmark from exhausting the elements.
+
+Furthermore, all the elements are of the same length and may lead to
+favourable results for one of the data structures being benchmarked.
+
+Should you have ideas on how to better benchmark this, a pull request
+would be greatly appreciated.
+
+Row values, if any, indicate the number of (byte)strings in the list.
+
+In order to reduce variance, I've chosen to populate each list with
+"lorem ipsum dolor sit amet consectetur adipisci".
+
+There may be performance implications, as the `Vec` structures likely
+prefer larger (byte)strings while the chosen (byte)string is relatively small.
+"""
+
+[table_comments]
+populate = """
+This benchmarks the population of each list structure at various sizes.
+
+The structures provided by this crate are expected to perform better than
+the `Vec` equivalents as the data vector will grow rapidly in size to
+accomodate for large numbers of new (byte)strings while the `Vec` equivalents
+need to find and allocate new space for each new (byte)string.
+
+This benchmark is slightly biased towards the structures provided by this crate.
+"""
+
+access = """
+This benchmarks accessing each list structure *without bounds checks*.
+
+The structures provided by this crate are expected to perform slightly worse
+than the `Vec` equivalents as they require two accesses (one for metadata,
+and one for the actual data), while the `Vec` equivalents only need one.
+"""
+
+remove_first_element = """
+This benchmarks removing the first element of each list structure, each populated with 10M elements.
+
+The structures provided by this crate are expected to perform *significantly* worse
+on this benchmark as all (byte)strings stored after the removed element need to
+be shifted, causing a large reallocation.
+
+The API provides the `ignore` and `swap_ignore` methods to combat this
+at the cost of stale memory.
+
+This benchmark is intentionally biased against the structures provided by this crate
+in order to demonstrate pathological behaviour.
+"""

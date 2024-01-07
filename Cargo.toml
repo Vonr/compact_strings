@@ -3,12 +3,21 @@ members = ["benchmarks"]
 
 [package]
 name = "compact_strings"
-version = "2.0.0"
+version = "3.0.0"
 edition = "2021"
-description = "A cache-friendly but limited representation of a list of strings or bytestrings."
+description = "A more compact but limited representation of a list of strings or bytestrings."
 license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/Vonr/compact_strings"
 repository = "https://github.com/Vonr/compact_strings"
-rust-version = "1.56.1"
+rust-version = "1.60.0"
 include = ["src/**/*", "README.md"]
+
+[dependencies.serde]
+version = "1.0"
+default-features = false
+optional = true
+
+[features]
+default = []
+serde = ["dep:serde"]

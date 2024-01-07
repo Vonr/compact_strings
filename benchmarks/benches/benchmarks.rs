@@ -79,102 +79,78 @@ fn remove_compact_bytes(cmpbytes: &mut CompactBytestrings, index: usize) {
 
 fn criterion_benchmark(c: &mut Criterion) {
     macro_rules! bench {
-        ($name:literal, $code:expr) => {
-            c.bench_function($name, |b| b.iter(|| $code));
+        ($name:expr, $code:expr) => {
+            c.bench_function(&*$name, |b| b.iter(|| $code));
         };
     }
 
-    bench!("populate str vec 100", populate_str_vec(black_box(100)));
-    bench!(
-        "populate bytestring vec 100",
-        populate_byte_vec(black_box(100))
-    );
-    bench!(
-        "populate compact strings 100",
-        populate_compact_strs(black_box(100))
-    );
-    bench!(
-        "populate compact bytestrings 100",
-        populate_compact_bytes(black_box(100))
-    );
-    bench!("populate str vec 10000", populate_str_vec(black_box(10000)));
-    bench!(
-        "populate bytestring vec 10000",
-        populate_byte_vec(black_box(10000))
-    );
-    bench!(
-        "populate compact strings 10000",
-        populate_compact_strs(black_box(10000))
-    );
-    bench!(
-        "populate compact bytestrings 10000",
-        populate_compact_bytes(black_box(10000))
-    );
-    bench!(
-        "populate str vec 10000000",
-        populate_str_vec(black_box(10000000))
-    );
-    bench!(
-        "populate bytestring vec 10000000",
-        populate_byte_vec(black_box(10000000))
-    );
-    bench!(
-        "populate compact strings 10000000",
-        populate_compact_strs(black_box(10000000))
-    );
-    bench!(
-        "populate compact bytestrings 10000000",
-        populate_compact_bytes(black_box(10000000))
-    );
+    const SIZES: &[usize] = &[100, 10_000, 10_000_000];
 
-    let size = 10000000;
+    for &size in SIZES {
+        bench!(
+            format!("Populate/Vec<String>/{size}"),
+            populate_str_vec(black_box(size))
+        );
+        bench!(
+            format!("Populate/Vec<Vec<u8>>/{size}"),
+            populate_byte_vec(black_box(size))
+        );
+        bench!(
+            format!("Populate/CompactStrings/{size}"),
+            populate_compact_strs(black_box(size))
+        );
+        bench!(
+            format!("Populate/CompactBytestrings/{size}"),
+            populate_compact_bytes(black_box(size))
+        );
+    }
 
-    {
+    for &size in SIZES {
+        let last = size - 1;
+
         let mut svec = populate_str_vec(size);
-        bench!("access vec strings", unsafe {
-            access_str_vec(black_box(&svec), black_box(9999))
+        bench!(format!("Access/Vec<String>/{size}"), unsafe {
+            access_str_vec(black_box(&svec), black_box(last))
         });
-        bench!("remove first vec string", {
+        bench!(format!("Remove First Element/Vec<String>/{size}"), {
             let vec = &mut svec;
             remove_str_vec(black_box(vec), black_box(0));
             vec.push("lorem ipsum dolor sit amet consectetur adipisci".to_string());
         });
-    }
+        drop(svec);
 
-    {
         let mut bvec = populate_byte_vec(size);
-        bench!("access vec bytestrings", unsafe {
-            access_byte_vec(black_box(&bvec), black_box(9999))
+        bench!(format!("Access/Vec<Vec<u8>>/{size}"), unsafe {
+            access_byte_vec(black_box(&bvec), black_box(last))
         });
-        bench!("remove first vec bytestring", {
+        bench!(format!("Remove First Element/Vec<Vec<u8>>/{size}"), {
             let vec = &mut bvec;
             remove_byte_vec(black_box(vec), black_box(0));
             vec.push(b"lorem ipsum dolor sit amet consectetur adipisci".to_vec());
         });
-    }
+        drop(bvec);
 
-    {
         let mut scmp = populate_compact_strs(size);
-        bench!("access compact strings", unsafe {
-            access_compact_strs(black_box(&scmp), black_box(9999))
+        bench!(format!("Access/CompactStrings/{size}"), unsafe {
+            access_compact_strs(black_box(&scmp), black_box(last))
         });
-        bench!("remove first compact string", {
+        bench!(format!("Remove First Element/in CompactStrings/{size}"), {
             let cmpstrs = &mut scmp;
             remove_compact_strs(black_box(cmpstrs), black_box(0));
             cmpstrs.push("lorem ipsum dolor sit amet consectetur adipisci");
         });
-    }
+        drop(scmp);
 
-    {
         let mut bcmp = populate_compact_bytes(size);
-        bench!("access compact bytestrings", unsafe {
-            access_compact_bytes(black_box(&bcmp), black_box(9999))
+        bench!(format!("Access/CompactBytestrings/{size}"), unsafe {
+            access_compact_bytes(black_box(&bcmp), black_box(last))
         });
-        bench!("remove first compact bytestring", {
+        bench!(format!("Remove First Element/CompactBytestrings/{size}"), {
             let cmpbytes = &mut bcmp;
             remove_compact_bytes(black_box(cmpbytes), black_box(0));
             cmpbytes.push(b"lorem ipsum dolor sit amet consectetur adipisci");
         });
+        drop(bcmp);
     }
 }
 

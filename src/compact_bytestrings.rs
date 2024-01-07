@@ -577,7 +577,7 @@ impl CompactBytestrings {
     /// assert_eq!(iterator.next(), None);
     /// ```
     #[inline]
-    pub const fn iter(&self) -> Iter<'_> {
+    pub fn iter(&self) -> Iter<'_> {
         Iter::new(self)
     }
 }
@@ -661,13 +661,16 @@ impl Index<usize> for CompactBytestrings {
 /// ```
 pub struct Iter<'a> {
     inner: &'a CompactBytestrings,
-    index: usize,
+    iter: core::slice::Iter<'a, Metadata>,
 }
 
 impl<'a> Iter<'a> {
     #[inline]
-    pub const fn new(inner: &'a CompactBytestrings) -> Self {
-        Self { inner, index: 0 }
+    pub fn new(inner: &'a CompactBytestrings) -> Self {
+        Self {
+            inner,
+            iter: inner.meta.iter(),
+        }
     }
 }
 
@@ -675,23 +678,29 @@ impl<'a> Iterator for Iter<'a> {
     type Item = &'a [u8];
 
     fn next(&mut self) -> Option<Self::Item> {
-        let out = self.inner.get(self.index);
-        self.index += 1;
+        let (start, len) = self.iter.next()?.as_tuple();
 
-        out
+        unsafe { Some(self.inner.data.get_unchecked(start..start + len)) }
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.inner.len().saturating_sub(self.index);
-        (len, Some(len))
+        self.iter.size_hint()
+    }
+}
+
+impl<'a> DoubleEndedIterator for Iter<'a> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let (start, len) = self.iter.next_back()?.as_tuple();
+
+        unsafe { Some(self.inner.data.get_unchecked(start..start + len)) }
     }
 }
 
 impl ExactSizeIterator for Iter<'_> {
     #[inline]
     fn len(&self) -> usize {
-        self.inner.len().saturating_sub(self.index)
+        self.iter.len()
     }
 }
 
@@ -720,11 +729,6 @@ where
         let mut out = CompactBytestrings::with_capacity(0, meta_capacity);
         for s in iter {
             out.push(s);
-        }
-
-        out.shrink_meta_to_fit();
-        if meta_capacity != 0 {
-            out.shrink_to_fit();
         }
 
         out
@@ -770,5 +774,23 @@ mod tests {
         assert_eq!(iter.len(), 0);
         let _ = iter.next();
         assert_eq!(iter.len(), 0);
+    }
+
+    #[test]
+    fn double_ended_iterator() {
+        let mut cmpbytes = CompactBytestrings::new();
+
+        cmpbytes.push(b"One");
+        cmpbytes.push(b"Two");
+        cmpbytes.push(b"Three");
+        cmpbytes.push(b"Four");
+
+        let mut iter = cmpbytes.iter();
+        assert_eq!(iter.next(), Some(b"One".as_slice()));
+        assert_eq!(iter.next_back(), Some(b"Four".as_slice()));
+        assert_eq!(iter.next(), Some(b"Two".as_slice()));
+        assert_eq!(iter.next_back(), Some(b"Three".as_slice()));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
     }
 }

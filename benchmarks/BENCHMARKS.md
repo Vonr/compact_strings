@@ -42,13 +42,11 @@ the `Vec` equivalents as the data vector will grow rapidly in size to
 accomodate for large numbers of new (byte)strings while the `Vec` equivalents
 need to find and allocate new space for each new (byte)string.
 
-This benchmark is slightly biased towards the structures provided by this crate.
-
 |                | `Vec<String>`             | `Vec<Vec<u8>>`                   | `CompactStrings`                 | `CompactBytestrings`              |
 |:---------------|:--------------------------|:---------------------------------|:---------------------------------|:--------------------------------- |
-| **`100`**      | `2.28 us` (✅ **1.00x**)   | `2.30 us` (✅ **1.01x slower**)   | `561.31 ns` (🚀 **4.06x faster**) | `496.81 ns` (🚀 **4.58x faster**)  |
-| **`10000`**    | `177.75 us` (✅ **1.00x**) | `183.15 us` (✅ **1.03x slower**) | `30.85 us` (🚀 **5.76x faster**)  | `27.84 us` (🚀 **6.38x faster**)   |
-| **`10000000`** | `429.24 ms` (✅ **1.00x**) | `439.21 ms` (✅ **1.02x slower**) | `118.54 ms` (🚀 **3.62x faster**) | `115.66 ms` (🚀 **3.71x faster**)  |
+| **`100`**      | `2.31 us` (✅ **1.00x**)   | `2.29 us` (✅ **1.01x faster**)   | `643.92 ns` (🚀 **3.59x faster**) | `534.54 ns` (🚀 **4.32x faster**)  |
+| **`10000`**    | `174.00 us` (✅ **1.00x**) | `177.69 us` (✅ **1.02x slower**) | `29.99 us` (🚀 **5.80x faster**)  | `27.17 us` (🚀 **6.40x faster**)   |
+| **`10000000`** | `417.67 ms` (✅ **1.00x**) | `417.80 ms` (✅ **1.00x slower**) | `112.15 ms` (🚀 **3.72x faster**) | `110.67 ms` (🚀 **3.77x faster**)  |
 
 ### Access
 
@@ -60,13 +58,13 @@ and one for the actual data), while the `Vec` equivalents only need one.
 
 |                | `Vec<String>`           | `Vec<Vec<u8>>`                 | `CompactStrings`               | `CompactBytestrings`            |
 |:---------------|:------------------------|:-------------------------------|:-------------------------------|:------------------------------- |
-| **`100`**      | `1.10 ns` (✅ **1.00x**) | `1.11 ns` (✅ **1.00x slower**) | `1.19 ns` (✅ **1.08x slower**) | `1.19 ns` (✅ **1.08x slower**)  |
-| **`10000`**    | `1.10 ns` (✅ **1.00x**) | `1.11 ns` (✅ **1.01x slower**) | `1.19 ns` (✅ **1.09x slower**) | `1.19 ns` (✅ **1.08x slower**)  |
-| **`10000000`** | `1.11 ns` (✅ **1.00x**) | `1.11 ns` (✅ **1.00x faster**) | `1.19 ns` (✅ **1.07x slower**) | `1.18 ns` (✅ **1.07x slower**)  |
+| **`100`**      | `1.09 ns` (✅ **1.00x**) | `1.09 ns` (✅ **1.00x faster**) | `1.16 ns` (✅ **1.06x slower**) | `1.15 ns` (✅ **1.06x slower**)  |
+| **`10000`**    | `1.07 ns` (✅ **1.00x**) | `1.08 ns` (✅ **1.01x slower**) | `1.16 ns` (✅ **1.08x slower**) | `1.16 ns` (✅ **1.08x slower**)  |
+| **`10000000`** | `1.09 ns` (✅ **1.00x**) | `1.09 ns` (✅ **1.00x faster**) | `1.15 ns` (✅ **1.06x slower**) | `1.16 ns` (✅ **1.07x slower**)  |
 
 ### Remove First Element
 
-This benchmarks removing the first element of each list structure, each populated with 10M elements.
+This benchmarks removing the first element of each list structure.
 
 The structures provided by this crate are expected to perform *significantly* worse
 on this benchmark as all (byte)strings stored after the removed element need to
@@ -80,9 +78,9 @@ in order to demonstrate pathological behaviour.
 
 |                | `Vec<String>`            | `Vec<Vec<u8>>`                  | `in CompactStrings`              | `CompactBytestrings`              |
 |:---------------|:-------------------------|:--------------------------------|:---------------------------------|:--------------------------------- |
-| **`100`**      | `42.16 ns` (✅ **1.00x**) | `42.70 ns` (✅ **1.01x slower**) | `114.92 ns` (❌ *2.73x slower*)   | `114.83 ns` (❌ *2.72x slower*)    |
-| **`10000`**    | `3.12 us` (✅ **1.00x**)  | `3.16 us` (✅ **1.01x slower**)  | `12.10 us` (❌ *3.88x slower*)    | `12.11 us` (❌ *3.88x slower*)     |
-| **`10000000`** | `16.72 ms` (✅ **1.00x**) | `20.55 ms` (❌ *1.23x slower*)   | `71.42 ms` (❌ *4.27x slower*)    | `70.50 ms` (❌ *4.22x slower*)     |
+| **`100`**      | `41.48 ns` (✅ **1.00x**) | `41.27 ns` (✅ **1.01x faster**) | `109.33 ns` (❌ *2.64x slower*)   | `110.47 ns` (❌ *2.66x slower*)    |
+| **`10000`**    | `3.06 us` (✅ **1.00x**)  | `3.06 us` (✅ **1.00x slower**)  | `11.70 us` (❌ *3.82x slower*)    | `11.88 us` (❌ *3.88x slower*)     |
+| **`10000000`** | `15.86 ms` (✅ **1.00x**) | `19.62 ms` (❌ *1.24x slower*)   | `58.82 ms` (❌ *3.71x slower*)    | `58.45 ms` (❌ *3.69x slower*)     |
 
 ---
 Made with [criterion-table](https://github.com/nu11ptr/criterion-table)

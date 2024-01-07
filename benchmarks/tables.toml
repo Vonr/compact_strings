@@ -30,8 +30,6 @@ The structures provided by this crate are expected to perform better than
 the `Vec` equivalents as the data vector will grow rapidly in size to
 accomodate for large numbers of new (byte)strings while the `Vec` equivalents
 need to find and allocate new space for each new (byte)string.
-
-This benchmark is slightly biased towards the structures provided by this crate.
 """
 
 access = """
@@ -43,7 +41,7 @@ and one for the actual data), while the `Vec` equivalents only need one.
 """
 
 remove_first_element = """
-This benchmarks removing the first element of each list structure, each populated with 10M elements.
+This benchmarks removing the first element of each list structure.
 
 The structures provided by this crate are expected to perform *significantly* worse
 on this benchmark as all (byte)strings stored after the removed element need to

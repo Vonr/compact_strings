@@ -1,0 +1,19 @@
+[package]
+name = "fuzz"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "compact_strings"
+path = "src/compact_strings.rs"
+
+[[bin]]
+name = "compact_bytestrings"
+path = "src/compact_bytestrings.rs"
+
+[dependencies]
+arbitrary = "1"
+better-panic = "0.3"
+honggfuzz = "0.5"
+rutenspitz = "0.3.0"
+compact_strings = { path = '../' }

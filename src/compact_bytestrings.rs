@@ -126,7 +126,11 @@ impl CompactBytestrings {
     /// ```
     pub fn get(&self, index: usize) -> Option<&[u8]> {
         let (start, len) = self.meta.get(index)?.as_tuple();
-        unsafe { Some(self.data.get_unchecked(start..start + len)) }
+        if cfg!(feature = "no_unsafe") {
+            self.data.get(start..start + len)
+        } else {
+            unsafe { Some(self.data.get_unchecked(start..start + len)) }
+        }
     }
 
     /// Returns a reference to the bytestring stored in the [`CompactBytestrings`] at that position, without
@@ -149,6 +153,7 @@ impl CompactBytestrings {
     ///     assert_eq!(cmpbytes.get_unchecked(2), b"Three".as_slice());
     /// }
     /// ```
+    #[cfg(not(feature = "no_unsafe"))]
     pub unsafe fn get_unchecked(&self, index: usize) -> &[u8] {
         let (start, len) = self.meta.get_unchecked(index).as_tuple();
         self.data.get_unchecked(start..start + len)
@@ -436,12 +441,16 @@ impl CompactBytestrings {
             meta.start -= start;
         }
 
-        unsafe {
-            let ptr = self.data.as_mut_ptr().add(start);
+        if cfg!(feature = "no_unsafe") {
+            self.data.copy_within(start + len..inner_len, start)
+        } else {
+            unsafe {
+                let ptr = self.data.as_mut_ptr().add(start);
 
-            core::ptr::copy(ptr.add(len), ptr, inner_len - start - len);
+                core::ptr::copy(ptr.add(len), ptr, inner_len - start - len);
 
-            self.data.set_len(inner_len - len);
+                self.data.set_len(inner_len - len);
+            }
         }
     }
 
@@ -568,7 +577,11 @@ impl<'a> Iterator for Iter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let (start, len) = self.iter.next()?.as_tuple();
 
-        unsafe { Some(self.inner.data.get_unchecked(start..start + len)) }
+        if cfg!(feature = "no_unsafe") {
+            self.inner.data.get(start..start + len)
+        } else {
+            unsafe { Some(self.inner.data.get_unchecked(start..start + len)) }
+        }
     }
 
     #[inline]
@@ -581,7 +594,11 @@ impl<'a> DoubleEndedIterator for Iter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let (start, len) = self.iter.next_back()?.as_tuple();
 
-        unsafe { Some(self.inner.data.get_unchecked(start..start + len)) }
+        if cfg!(feature = "no_unsafe") {
+            self.inner.data.get(start..start + len)
+        } else {
+            unsafe { Some(self.inner.data.get_unchecked(start..start + len)) }
+        }
     }
 }
 

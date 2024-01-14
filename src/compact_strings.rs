@@ -120,7 +120,11 @@ impl CompactStrings {
     /// ```
     pub fn get(&self, index: usize) -> Option<&str> {
         let bytes = self.0.get(index)?;
-        unsafe { Some(core::str::from_utf8_unchecked(bytes)) }
+        if cfg!(feature = "no_unsafe") {
+            core::str::from_utf8(bytes).ok()
+        } else {
+            unsafe { Some(core::str::from_utf8_unchecked(bytes)) }
+        }
     }
 
     /// Returns a reference to the string stored in the [`CompactStrings`] at that position, without
@@ -143,6 +147,7 @@ impl CompactStrings {
     ///     assert_eq!(cmpstrs.get_unchecked(2), "Three");
     /// }
     /// ```
+    #[cfg(not(feature = "no_unsafe"))]
     pub unsafe fn get_unchecked(&self, index: usize) -> &str {
         let bytes = self.0.get_unchecked(index);
         core::str::from_utf8_unchecked(bytes)
@@ -505,10 +510,14 @@ impl<'a> Iterator for Iter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let (start, len) = self.iter.next()?.as_tuple();
 
-        unsafe {
-            Some(core::str::from_utf8_unchecked(
-                self.inner.0.data.get_unchecked(start..start + len),
-            ))
+        if cfg!(feature = "no_unsafe") {
+            core::str::from_utf8(self.inner.0.data.get(start..start + len)?).ok()
+        } else {
+            unsafe {
+                Some(core::str::from_utf8_unchecked(
+                    self.inner.0.data.get_unchecked(start..start + len),
+                ))
+            }
         }
     }
 
@@ -522,10 +531,14 @@ impl<'a> DoubleEndedIterator for Iter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let (start, len) = self.iter.next_back()?.as_tuple();
 
-        unsafe {
-            Some(core::str::from_utf8_unchecked(
-                self.inner.0.data.get_unchecked(start..start + len),
-            ))
+        if cfg!(feature = "no_unsafe") {
+            core::str::from_utf8(self.inner.0.data.get(start..start + len)?).ok()
+        } else {
+            unsafe {
+                Some(core::str::from_utf8_unchecked(
+                    self.inner.0.data.get_unchecked(start..start + len),
+                ))
+            }
         }
     }
 }
@@ -692,4 +705,5 @@ mod serde {
 
 #[cfg(feature = "serde")]
 #[cfg_attr(feature = "serde", allow(unused_imports))]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub use self::serde::*;

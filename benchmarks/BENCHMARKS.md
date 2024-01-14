@@ -44,9 +44,9 @@ need to find and allocate new space for each new (byte)string.
 
 |                | `Vec<String>`             | `Vec<Vec<u8>>`                   | `CompactStrings`                 | `CompactBytestrings`              |
 |:---------------|:--------------------------|:---------------------------------|:---------------------------------|:--------------------------------- |
-| **`100`**      | `2.31 us` (✅ **1.00x**)   | `2.29 us` (✅ **1.01x faster**)   | `643.92 ns` (🚀 **3.59x faster**) | `534.54 ns` (🚀 **4.32x faster**)  |
-| **`10000`**    | `174.00 us` (✅ **1.00x**) | `177.69 us` (✅ **1.02x slower**) | `29.99 us` (🚀 **5.80x faster**)  | `27.17 us` (🚀 **6.40x faster**)   |
-| **`10000000`** | `417.67 ms` (✅ **1.00x**) | `417.80 ms` (✅ **1.00x slower**) | `112.15 ms` (🚀 **3.72x faster**) | `110.67 ms` (🚀 **3.77x faster**)  |
+| **`100`**      | `2.44 us` (✅ **1.00x**)   | `2.36 us` (✅ **1.03x faster**)   | `583.10 ns` (🚀 **4.19x faster**) | `503.16 ns` (🚀 **4.86x faster**)  |
+| **`10000`**    | `184.57 us` (✅ **1.00x**) | `187.08 us` (✅ **1.01x slower**) | `31.74 us` (🚀 **5.81x faster**)  | `29.22 us` (🚀 **6.32x faster**)   |
+| **`10000000`** | `454.46 ms` (✅ **1.00x**) | `454.06 ms` (✅ **1.00x faster**) | `217.10 ms` (🚀 **2.09x faster**) | `217.97 ms` (🚀 **2.08x faster**)  |
 
 ### Access
 
@@ -58,9 +58,9 @@ and one for the actual data), while the `Vec` equivalents only need one.
 
 |                | `Vec<String>`           | `Vec<Vec<u8>>`                 | `CompactStrings`               | `CompactBytestrings`            |
 |:---------------|:------------------------|:-------------------------------|:-------------------------------|:------------------------------- |
-| **`100`**      | `1.09 ns` (✅ **1.00x**) | `1.09 ns` (✅ **1.00x faster**) | `1.16 ns` (✅ **1.06x slower**) | `1.15 ns` (✅ **1.06x slower**)  |
-| **`10000`**    | `1.07 ns` (✅ **1.00x**) | `1.08 ns` (✅ **1.01x slower**) | `1.16 ns` (✅ **1.08x slower**) | `1.16 ns` (✅ **1.08x slower**)  |
-| **`10000000`** | `1.09 ns` (✅ **1.00x**) | `1.09 ns` (✅ **1.00x faster**) | `1.15 ns` (✅ **1.06x slower**) | `1.16 ns` (✅ **1.07x slower**)  |
+| **`100`**      | `1.13 ns` (✅ **1.00x**) | `1.13 ns` (✅ **1.00x slower**) | `1.24 ns` (✅ **1.09x slower**) | `1.23 ns` (✅ **1.08x slower**)  |
+| **`10000`**    | `1.15 ns` (✅ **1.00x**) | `1.14 ns` (✅ **1.00x faster**) | `1.22 ns` (✅ **1.06x slower**) | `1.25 ns` (✅ **1.09x slower**)  |
+| **`10000000`** | `1.14 ns` (✅ **1.00x**) | `1.11 ns` (✅ **1.03x faster**) | `1.19 ns` (✅ **1.05x slower**) | `1.20 ns` (✅ **1.05x slower**)  |
 
 ### Remove First Element
 
@@ -70,7 +70,7 @@ The structures provided by this crate are expected to perform *significantly* wo
 on this benchmark as all (byte)strings stored after the removed element need to
 be shifted, causing a large reallocation.
 
-The API provides the `ignore` and `swap_ignore` methods to combat this
+The API provides the `ignore` method which only removes the metadata to combat this
 at the cost of stale memory.
 
 This benchmark is intentionally biased against the structures provided by this crate
@@ -78,9 +78,9 @@ in order to demonstrate pathological behaviour.
 
 |                | `Vec<String>`            | `Vec<Vec<u8>>`                  | `in CompactStrings`              | `CompactBytestrings`              |
 |:---------------|:-------------------------|:--------------------------------|:---------------------------------|:--------------------------------- |
-| **`100`**      | `41.48 ns` (✅ **1.00x**) | `41.27 ns` (✅ **1.01x faster**) | `109.33 ns` (❌ *2.64x slower*)   | `110.47 ns` (❌ *2.66x slower*)    |
-| **`10000`**    | `3.06 us` (✅ **1.00x**)  | `3.06 us` (✅ **1.00x slower**)  | `11.70 us` (❌ *3.82x slower*)    | `11.88 us` (❌ *3.88x slower*)     |
-| **`10000000`** | `15.86 ms` (✅ **1.00x**) | `19.62 ms` (❌ *1.24x slower*)   | `58.82 ms` (❌ *3.71x slower*)    | `58.45 ms` (❌ *3.69x slower*)     |
+| **`100`**      | `43.33 ns` (✅ **1.00x**) | `44.00 ns` (✅ **1.02x slower**) | `116.45 ns` (❌ *2.69x slower*)   | `116.64 ns` (❌ *2.69x slower*)    |
+| **`10000`**    | `3.22 us` (✅ **1.00x**)  | `3.41 us` (✅ **1.06x slower**)  | `13.31 us` (❌ *4.14x slower*)    | `13.14 us` (❌ *4.09x slower*)     |
+| **`10000000`** | `18.18 ms` (✅ **1.00x**) | `19.72 ms` (✅ **1.08x slower**) | `70.70 ms` (❌ *3.89x slower*)    | `64.84 ms` (❌ *3.57x slower*)     |
 
 ---
 Made with [criterion-table](https://github.com/nu11ptr/criterion-table)

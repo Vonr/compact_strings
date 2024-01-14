@@ -47,7 +47,7 @@ The structures provided by this crate are expected to perform *significantly* wo
 on this benchmark as all (byte)strings stored after the removed element need to
 be shifted, causing a large reallocation.
 
-The API provides the `ignore` and `swap_ignore` methods to combat this
+The API provides the `ignore` method which only removes the metadata to combat this
 at the cost of stale memory.
 
 This benchmark is intentionally biased against the structures provided by this crate

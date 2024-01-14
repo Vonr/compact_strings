@@ -126,7 +126,7 @@ impl CompactBytestrings {
     /// ```
     pub fn get(&self, index: usize) -> Option<&[u8]> {
         let (start, len) = self.meta.get(index)?.as_tuple();
-        self.data.get(start..start + len)
+        unsafe { Some(self.data.get_unchecked(start..start + len)) }
     }
 
     /// Returns a reference to the bytestring stored in the [`CompactBytestrings`] at that position, without
@@ -345,15 +345,12 @@ impl CompactBytestrings {
     /// Removes the data pointing to where the bytestring at the specified index is stored.
     ///
     /// Note: This does not remove the bytes of the bytestring from memory, you may want to use
-    /// [`remove`] or [`swap_remove`] if you desire that behavior.
+    /// [`remove`] if you desire that behavior.
     ///
     /// Note: Because this shifts over the remaining elements in the meta vector, it has a
-    /// worst-case performance of *O*(*n*). If you don't need the order of elements
-    /// to be preserved, use [`swap_ignore`] instead.
+    /// worst-case performance of *O*(*n*).
     ///
     /// [`remove`]: CompactBytestrings::remove
-    /// [`swap_remove`]: CompactBytestrings::swap_remove
-    /// [`swap_ignore`]: CompactBytestrings::swap_ignore
     ///
     /// # Examples
     /// ```
@@ -387,53 +384,6 @@ impl CompactBytestrings {
         self.meta.remove(index);
     }
 
-    /// Removes the data pointing to where the bytestring at the specified index is stored.
-    ///
-    /// The removed element is replaced by the last element of the meta vector.
-    ///
-    /// Note that this does not remove the bytes of the bytestring from memory, you may want to use
-    /// [`remove`] or [`swap_remove`] if you desire that behavior. This operation is O(1) on both
-    /// the meta and data vectors
-    ///
-    /// This does not preserve ordering, but is *O*(1) on the meta vector.
-    /// If you need to preserve the element order, use [`ignore`] instead.
-    ///
-    /// [`remove`]: CompactBytestrings::remove
-    /// [`swap_remove`]: CompactBytestrings::swap_remove
-    /// [`ignore`]: CompactBytestrings::ignore
-    ///
-    /// # Examples
-    /// ```
-    /// # use compact_strings::CompactBytestrings;
-    /// let mut cmpbytes = CompactBytestrings::with_capacity(20, 3);
-    ///
-    /// cmpbytes.push(b"One");
-    /// cmpbytes.push(b"Two");
-    /// cmpbytes.push(b"Three");
-    ///
-    /// cmpbytes.swap_ignore(0);
-    ///
-    /// assert_eq!(cmpbytes.get(0), Some(b"Three".as_slice()));
-    /// assert_eq!(cmpbytes.get(1), Some(b"Two".as_slice()));
-    /// assert_eq!(cmpbytes.get(2), None);
-    /// ```
-    #[track_caller]
-    pub fn swap_ignore(&mut self, index: usize) {
-        #[cold]
-        #[inline(never)]
-        #[track_caller]
-        fn assert_failed(index: usize, len: usize) -> ! {
-            panic!("removal index (is {index}) should be < len (is {len})");
-        }
-
-        let len = self.len();
-        if index >= len {
-            assert_failed(index, len);
-        }
-
-        self.meta.swap_remove(index);
-    }
-
     /// Removes the bytes of the bytestring and data pointing to the bytestring is stored.
     ///
     /// Note: This does not shrink the vectors where the bytes of the bytestring and data to the bytestring
@@ -441,17 +391,14 @@ impl CompactBytestrings {
     /// meta vector with [`shrink_meta_to`] and [`shrink_meta_to_fit`].
     ///
     /// Note: Because this shifts over the remaining elements in both data and meta vectors, it
-    /// has a worst-case performance of *O*(*n*). If you don't need the order of elements
-    /// to be preserved, use [`swap_remove`] instead. If you don't need the bytes of the bytestring to
-    /// be removed, use [`ignore`] or [`swap_ignore`] instead.
+    /// has a worst-case performance of *O*(*n*). If you don't need the bytes of the bytestring to
+    /// be removed, use [`ignore`] instead.
     ///
     /// [`shrink_to`]: CompactBytestrings::shrink_to
     /// [`shrink_to_fit`]: CompactBytestrings::shrink_to_fit
     /// [`shrink_meta_to`]: CompactBytestrings::shrink_meta_to
     /// [`shrink_meta_to_fit`]: CompactBytestrings::shrink_meta_to_fit
-    /// [`swap_remove`]: CompactBytestrings::swap_remove
     /// [`ignore`]: CompactBytestrings::ignore
-    /// [`swap_ignore`]: CompactBytestrings::swap_ignore
     ///
     /// # Examples
     /// ```
@@ -496,65 +443,6 @@ impl CompactBytestrings {
 
             self.data.set_len(inner_len - len);
         }
-    }
-
-    /// Removes the bytes of the bytestring and data pointing to the bytestring is stored.
-    ///
-    /// Note: This does not shrink the vectors where the bytes of the bytestring and data to the bytestring
-    /// are stored. You may shrink the data vector with [`shrink_to`] and [`shrink_to_fit`] and the
-    /// meta vector with [`shrink_meta_to`] and [`shrink_meta_to_fit`].
-    ///
-    /// This does not preserve ordering, but is *O*(1) on the meta vector.
-    /// It is still at worst *O*(*n*) on the data vector as there is no guarantee that the last
-    /// bytestring can fit perfectly in the empty space created. This will not be attempted even if
-    /// possible as it is unlikely for many cases. Such a swap could also be done if the last
-    /// bytestring is of a lower length than the removed bytestring, but doing so wastes space that
-    /// the shrinking methods do not account for.
-    /// If you need to preserve the element order, use [`ignore`] instead.
-    ///
-    /// [`shrink_to`]: CompactBytestrings::shrink_to
-    /// [`shrink_to_fit`]: CompactBytestrings::shrink_to_fit
-    /// [`shrink_meta_to`]: CompactBytestrings::shrink_meta_to
-    /// [`shrink_meta_to_fit`]: CompactBytestrings::shrink_meta_to_fit
-    /// [`ignore`]: CompactBytestrings::ignore
-    /// [`swap_ignore`]: CompactBytestrings::swap_ignore
-    ///
-    /// # Examples
-    /// ```
-    /// # use compact_strings::CompactBytestrings;
-    /// let mut cmpbytes = CompactBytestrings::with_capacity(20, 3);
-    ///
-    /// cmpbytes.push(b"One");
-    /// cmpbytes.push(b"Two");
-    /// cmpbytes.push(b"Three");
-    ///
-    /// cmpbytes.swap_remove(0);
-    ///
-    /// assert_eq!(cmpbytes.get(0), Some(b"Three".as_slice()));
-    /// assert_eq!(cmpbytes.get(1), Some(b"Two".as_slice()));
-    /// assert_eq!(cmpbytes.get(2), None);
-    /// ```
-    #[track_caller]
-    pub fn swap_remove(&mut self, index: usize) {
-        #[cold]
-        #[inline(never)]
-        #[track_caller]
-        fn assert_failed(index: usize, len: usize) -> ! {
-            panic!("removal index (is {index}) should be < len (is {len})");
-        }
-
-        let len = self.len();
-        if index >= len {
-            assert_failed(index, len);
-        }
-
-        let (start, len) = self.meta.swap_remove(index).as_tuple();
-        let inner_len = self.data.len();
-        for m in self.meta.iter_mut().skip(index) {
-            m.start -= len;
-        }
-        self.data.copy_within(start + len.., start);
-        self.data.truncate(inner_len - len);
     }
 
     /// Returns an iterator over the slice.

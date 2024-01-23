@@ -13,8 +13,8 @@ are currently in the `Vec`, and a capacity denoting the number of elements the
 allocation pointed to can hold.
 
 The capacity may not be needed when stored in a list structure, especially when
-the (byte)strings are immutable. The pointer also causes indirection to memory
-unlikely to be cache-local.
+the (byte)strings are immutable. Furthermore, since each (byte)string uses its
+own allocation, large lists will create many allocations, which can be quite slow.
 
 This crate instead stores lists of (byte)strings as two vectors:  
 1. Metadata - which holds the starting indexes of the (byte)strings
@@ -22,7 +22,7 @@ This crate instead stores lists of (byte)strings as two vectors:
 
 This means that we pay an upfront cost of 6 pointer-widths compared to just 3,
 but save a pointer-width for every string after the third, in addition to 
-(hopefully) better cache-friendliness.
+being able to store all strings in one fast-growing allocation.
 
 Unfortunately, this structure makes mutating (byte)strings stored in the data vector
 extremely difficult without shifting the rest of the data around.  

@@ -77,6 +77,12 @@ fn remove_compact_bytes(cmpbytes: &mut CompactBytestrings, index: usize) {
     cmpbytes.remove(index);
 }
 
+fn iter<T, I: IntoIterator<Item = T>>(iterator: I) {
+    for e in iterator {
+        std::hint::black_box(e);
+    }
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     macro_rules! bench {
         ($name:expr, $code:expr) => {
@@ -112,6 +118,9 @@ fn criterion_benchmark(c: &mut Criterion) {
         bench!(format!("Access/Vec<String>/{size}"), unsafe {
             access_str_vec(black_box(&svec), black_box(last))
         });
+        bench!(format!("Iterate/Vec<String>/{size}"), {
+            iter(black_box(&svec))
+        });
         bench!(format!("Remove First Element/Vec<String>/{size}"), {
             let vec = &mut svec;
             remove_str_vec(black_box(vec), black_box(0));
@@ -122,6 +131,9 @@ fn criterion_benchmark(c: &mut Criterion) {
         let mut bvec = populate_byte_vec(size);
         bench!(format!("Access/Vec<Vec<u8>>/{size}"), unsafe {
             access_byte_vec(black_box(&bvec), black_box(last))
+        });
+        bench!(format!("Iterate/Vec<Vec<u8>>/{size}"), {
+            iter(black_box(&bvec))
         });
         bench!(format!("Remove First Element/Vec<Vec<u8>>/{size}"), {
             let vec = &mut bvec;
@@ -134,6 +146,9 @@ fn criterion_benchmark(c: &mut Criterion) {
         bench!(format!("Access/CompactStrings/{size}"), unsafe {
             access_compact_strs(black_box(&scmp), black_box(last))
         });
+        bench!(format!("Iterate/CompactStrings/{size}"), {
+            iter(black_box(&scmp))
+        });
         bench!(format!("Remove First Element/in CompactStrings/{size}"), {
             let cmpstrs = &mut scmp;
             remove_compact_strs(black_box(cmpstrs), black_box(0));
@@ -144,6 +159,9 @@ fn criterion_benchmark(c: &mut Criterion) {
         let mut bcmp = populate_compact_bytes(size);
         bench!(format!("Access/CompactBytestrings/{size}"), unsafe {
             access_compact_bytes(black_box(&bcmp), black_box(last))
+        });
+        bench!(format!("Iterate/CompactBytestrings/{size}"), {
+            iter(black_box(&bcmp))
         });
         bench!(format!("Remove First Element/CompactBytestrings/{size}"), {
             let cmpbytes = &mut bcmp;

@@ -1,4 +1,4 @@
-//! Implements a cache-friendly but limited representation of a list of strings.
+//! Implements a more compact but limited representation of a list of strings.
 //!
 //! Strings are stored contiguously in a vector of bytes, with their lengths and starting indices
 //! being stored separately.

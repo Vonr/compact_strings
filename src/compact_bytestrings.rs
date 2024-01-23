@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use crate::{metadata::Metadata, CompactStrings};
 
-/// A cache-friendly but limited representation of a list of bytestrings.
+/// A more compact but limited representation of a list of bytestrings.
 ///
 /// Strings are stored contiguously in a vector of bytes, with their lengths and starting indices
 /// being stored separately.

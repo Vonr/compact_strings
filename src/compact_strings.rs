@@ -5,7 +5,7 @@ use core::{
 
 use crate::{metadata::Metadata, CompactBytestrings};
 
-/// A cache-friendly but limited representation of a list of strings.
+/// A more compact but limited representation of a list of strings.
 ///
 /// Strings are stored contiguously in a vector of bytes, with their lengths and starting indices
 /// being stored separately.

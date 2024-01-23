@@ -40,6 +40,14 @@ than the `Vec` equivalents as they require two accesses (one for metadata,
 and one for the actual data), while the `Vec` equivalents only need one.
 """
 
+iterate = """
+This benchmarks iterating over each list structure.
+
+The structures provided by this crate are expected to perform worse
+than the `Vec` equivalents as they require two accesses (one for metadata,
+and one for the actual data), while the `Vec` equivalents only need one.
+"""
+
 remove_first_element = """
 This benchmarks removing the first element of each list structure.
 

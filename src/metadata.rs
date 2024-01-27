@@ -1,3 +1,4 @@
+#[derive(Clone, Copy)]
 pub(crate) struct Metadata {
     pub(crate) start: usize,
     pub(crate) len: usize,

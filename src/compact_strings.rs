@@ -497,7 +497,7 @@ impl Index<usize> for CompactStrings {
 /// assert_eq!(iter.next(), Some("Three"));
 /// assert_eq!(iter.next(), None);
 /// ```
-#[must_use = "Iterators are lazy and must be consumed to be useful"]
+#[must_use = "Iterators are lazy and do nothing unless consumed"]
 pub struct Iter<'a> {
     inner: &'a CompactStrings,
     iter: core::slice::Iter<'a, Metadata>,

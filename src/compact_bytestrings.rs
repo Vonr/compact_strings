@@ -564,7 +564,7 @@ impl Index<usize> for CompactBytestrings {
 /// assert_eq!(iter.next(), Some(b"Three".as_slice()));
 /// assert_eq!(iter.next(), None);
 /// ```
-#[must_use = "Iterators are lazy and must be consumed to be useful"]
+#[must_use = "Iterators are lazy and do nothing unless consumed"]
 pub struct Iter<'a> {
     inner: &'a CompactBytestrings,
     iter: core::slice::Iter<'a, Metadata>,

@@ -481,18 +481,15 @@ impl CompactBytestrings {
 
 impl Clone for CompactBytestrings {
     fn clone(&self) -> Self {
-        let mut data = Vec::with_capacity(self.meta.iter().map(|m| m.len).sum());
-        let mut meta = Vec::with_capacity(self.meta.len());
-
-        for bytes in self.iter() {
-            meta.push(Metadata {
-                start: data.len(),
-                len: bytes.len(),
-            });
-            data.extend_from_slice(bytes);
+        Self {
+            data: self.data.clone(),
+            meta: self.meta.clone(),
         }
+    }
 
-        Self { data, meta }
+    fn clone_from(&mut self, source: &Self) {
+        self.data.clone_from(&source.data);
+        self.meta.clone_from(&source.meta)
     }
 }
 

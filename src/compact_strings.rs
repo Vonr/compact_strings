@@ -3,7 +3,7 @@ use core::{
     ops::{Deref, Index},
 };
 
-use crate::{metadata::Metadata, CompactBytestrings};
+use crate::CompactBytestrings;
 
 /// A more compact but limited representation of a list of strings.
 ///
@@ -425,7 +425,7 @@ impl CompactStrings {
     /// ```
     #[inline]
     pub fn iter(&self) -> Iter<'_> {
-        Iter::new(self)
+        Iter(self.0.iter())
     }
 }
 
@@ -489,17 +489,18 @@ impl Index<usize> for CompactStrings {
 /// assert_eq!(iter.next(), Some("Three"));
 /// assert_eq!(iter.next(), None);
 /// ```
-pub struct Iter<'a> {
-    inner: &'a CompactStrings,
-    iter: core::slice::Iter<'a, Metadata>,
-}
+pub struct Iter<'a>(crate::compact_bytestrings::Iter<'a>);
 
 impl<'a> Iter<'a> {
-    #[inline]
     pub fn new(inner: &'a CompactStrings) -> Self {
-        Self {
-            inner,
-            iter: inner.0.meta.iter(),
+        Self(inner.0.iter())
+    }
+
+    fn from_utf8_maybe_checked(bytes: &[u8]) -> Option<&str> {
+        if cfg!(feature = "no_unsafe") {
+            core::str::from_utf8(bytes).ok()
+        } else {
+            Some(unsafe { core::str::from_utf8_unchecked(bytes) })
         }
     }
 }
@@ -508,45 +509,25 @@ impl<'a> Iterator for Iter<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (start, len) = self.iter.next()?.as_tuple();
-
-        if cfg!(feature = "no_unsafe") {
-            core::str::from_utf8(self.inner.0.data.get(start..start + len)?).ok()
-        } else {
-            unsafe {
-                Some(core::str::from_utf8_unchecked(
-                    self.inner.0.data.get_unchecked(start..start + len),
-                ))
-            }
-        }
+        self.0.next().and_then(Self::from_utf8_maybe_checked)
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
+        self.0.size_hint()
     }
 }
 
 impl<'a> DoubleEndedIterator for Iter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        let (start, len) = self.iter.next_back()?.as_tuple();
-
-        if cfg!(feature = "no_unsafe") {
-            core::str::from_utf8(self.inner.0.data.get(start..start + len)?).ok()
-        } else {
-            unsafe {
-                Some(core::str::from_utf8_unchecked(
-                    self.inner.0.data.get_unchecked(start..start + len),
-                ))
-            }
-        }
+        self.0.next_back().and_then(Self::from_utf8_maybe_checked)
     }
 }
 
 impl ExactSizeIterator for Iter<'_> {
     #[inline]
     fn len(&self) -> usize {
-        self.iter.len()
+        self.0.len()
     }
 }
 
@@ -557,7 +538,7 @@ impl<'a> IntoIterator for &'a CompactStrings {
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter::new(self)
+        self.iter()
     }
 }
 

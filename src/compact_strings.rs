@@ -651,22 +651,14 @@ mod tests {
 mod serde {
     use serde::{
         de::{SeqAccess, Visitor},
-        ser::SerializeSeq,
         Deserialize, Deserializer, Serialize,
     };
 
     use crate::CompactStrings;
 
     impl Serialize for CompactStrings {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-        {
-            let mut seq = serializer.serialize_seq(Some(self.len()))?;
-            for bstr in self {
-                seq.serialize_element(bstr)?;
-            }
-            seq.end()
+        fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.collect_seq(self)
         }
     }
 

@@ -21,6 +21,7 @@
 //! assert_eq!(cmpstrs.get(2), None);
 //! ```
 #![no_std]
+#![warn(clippy::pedantic)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 extern crate alloc;
 

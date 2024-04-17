@@ -41,6 +41,7 @@ impl CompactBytestrings {
     /// # use compact_strings::CompactBytestrings;
     /// let mut cmpbytes = CompactBytestrings::new();
     /// ```
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             data: Vec::new(),
@@ -55,8 +56,8 @@ impl CompactBytestrings {
     /// - `capacity_meta`: The capacity of the meta vector where the starting indices and lengths
     /// of the bytestrings are stored.
     ///
-    /// The [`CompactBytestrings`] will be able to hold at least *data_capacity* bytes worth of bytestrings
-    /// without reallocating the data vector, and at least *capacity_meta* of starting indices and
+    /// The [`CompactBytestrings`] will be able to hold at least *`data_capacity`* bytes worth of bytestrings
+    /// without reallocating the data vector, and at least *`capacity_meta`* of starting indices and
     /// lengths without reallocating the meta vector. This method is allowed to allocate for more bytes
     /// than the capacities. If a capacity is 0, the vector will not allocate.
     ///
@@ -77,6 +78,7 @@ impl CompactBytestrings {
     /// assert!(cmpbytes.capacity() >= 20);
     /// assert!(cmpbytes.capacity_meta() >= 3);
     /// ```
+    #[must_use]
     pub fn with_capacity(data_capacity: usize, capacity_meta: usize) -> Self {
         Self {
             data: Vec::with_capacity(data_capacity),
@@ -124,6 +126,7 @@ impl CompactBytestrings {
     /// assert_eq!(cmpbytes.get(2), Some(b"Three".as_slice()));
     /// assert_eq!(cmpbytes.get(3), None);
     /// ```
+    #[must_use]
     pub fn get(&self, index: usize) -> Option<&[u8]> {
         let (start, len) = self.meta.get(index)?.as_tuple();
         if cfg!(feature = "no_unsafe") {
@@ -153,6 +156,7 @@ impl CompactBytestrings {
     ///     assert_eq!(cmpbytes.get_unchecked(2), b"Three".as_slice());
     /// }
     /// ```
+    #[must_use]
     #[cfg(not(feature = "no_unsafe"))]
     pub unsafe fn get_unchecked(&self, index: usize) -> &[u8] {
         let (start, len) = self.meta.get_unchecked(index).as_tuple();
@@ -173,6 +177,7 @@ impl CompactBytestrings {
     /// assert_eq!(cmpbytes.len(), 3);
     /// ```
     #[inline]
+    #[must_use]
     pub fn len(&self) -> usize {
         self.meta.len()
     }
@@ -190,6 +195,7 @@ impl CompactBytestrings {
     /// assert!(!cmpbytes.is_empty());
     /// ```
     #[inline]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -206,6 +212,7 @@ impl CompactBytestrings {
     /// assert!(cmpbytes.capacity() >= 20);
     /// ```
     #[inline]
+    #[must_use]
     pub fn capacity(&self) -> usize {
         self.data.capacity()
     }
@@ -226,6 +233,7 @@ impl CompactBytestrings {
     /// assert!(cmpbytes.capacity_meta() > 3);
     /// ```
     #[inline]
+    #[must_use]
     pub fn capacity_meta(&self) -> usize {
         self.meta.capacity()
     }
@@ -442,7 +450,7 @@ impl CompactBytestrings {
         }
 
         if cfg!(feature = "no_unsafe") {
-            self.data.copy_within(start + len..inner_len, start)
+            self.data.copy_within(start + len..inner_len, start);
         } else {
             unsafe {
                 let ptr = self.data.as_mut_ptr().add(start);
@@ -484,7 +492,7 @@ impl Clone for CompactBytestrings {
         let mut data = Vec::with_capacity(self.meta.iter().map(|m| m.len).sum());
         let mut meta = Vec::with_capacity(self.meta.len());
 
-        for bytes in self.iter() {
+        for bytes in self {
             meta.push(Metadata {
                 start: data.len(),
                 len: bytes.len(),
@@ -556,6 +564,7 @@ impl Index<usize> for CompactBytestrings {
 /// assert_eq!(iter.next(), Some(b"Three".as_slice()));
 /// assert_eq!(iter.next(), None);
 /// ```
+#[must_use = "Iterators are lazy and do nothing unless consumed"]
 pub struct Iter<'a> {
     data: &'a [u8],
     iter: core::slice::Iter<'a, Metadata>,

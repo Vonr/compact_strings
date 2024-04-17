@@ -41,6 +41,7 @@ impl CompactStrings {
     /// # use compact_strings::CompactStrings;
     /// let mut cmpstrs = CompactStrings::new();
     /// ```
+    #[must_use]
     pub const fn new() -> Self {
         Self(CompactBytestrings::new())
     }
@@ -52,8 +53,8 @@ impl CompactStrings {
     /// - `capacity_meta`: The capacity of the meta vector where the starting indices and lengths
     /// of the strings are stored.
     ///
-    /// The [`CompactStrings`] will be able to hold at least *data_capacity* bytes worth of strings
-    /// without reallocating the data vector, and at least *capacity_meta* of starting indices and
+    /// The [`CompactStrings`] will be able to hold at least *`data_capacity`* bytes worth of strings
+    /// without reallocating the data vector, and at least *`capacity_meta`* of starting indices and
     /// lengths without reallocating the meta vector. This method is allowed to allocate for more bytes
     /// than the capacities. If a capacity is 0, the vector will not allocate.
     ///
@@ -74,6 +75,7 @@ impl CompactStrings {
     /// assert!(cmpstrs.capacity() >= 20);
     /// assert!(cmpstrs.capacity_meta() >= 3);
     /// ```
+    #[must_use]
     pub fn with_capacity(data_capacity: usize, capacity_meta: usize) -> Self {
         Self(CompactBytestrings::with_capacity(
             data_capacity,
@@ -100,7 +102,7 @@ impl CompactStrings {
     where
         S: Deref<Target = str>,
     {
-        self.0.push(string.as_bytes())
+        self.0.push(string.as_bytes());
     }
 
     /// Returns a reference to the string stored in the [`CompactStrings`] at that position.
@@ -118,6 +120,7 @@ impl CompactStrings {
     /// assert_eq!(cmpstrs.get(2), Some("Three"));
     /// assert_eq!(cmpstrs.get(3), None);
     /// ```
+    #[must_use]
     pub fn get(&self, index: usize) -> Option<&str> {
         let bytes = self.0.get(index)?;
         if cfg!(feature = "no_unsafe") {
@@ -147,6 +150,7 @@ impl CompactStrings {
     ///     assert_eq!(cmpstrs.get_unchecked(2), "Three");
     /// }
     /// ```
+    #[must_use]
     #[cfg(not(feature = "no_unsafe"))]
     pub unsafe fn get_unchecked(&self, index: usize) -> &str {
         let bytes = self.0.get_unchecked(index);
@@ -167,6 +171,7 @@ impl CompactStrings {
     /// assert_eq!(cmpstrs.len(), 3);
     /// ```
     #[inline]
+    #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -184,6 +189,7 @@ impl CompactStrings {
     /// assert!(!cmpstrs.is_empty());
     /// ```
     #[inline]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -200,6 +206,7 @@ impl CompactStrings {
     /// assert!(cmpstrs.capacity() >= 20);
     /// ```
     #[inline]
+    #[must_use]
     pub fn capacity(&self) -> usize {
         self.0.capacity()
     }
@@ -220,6 +227,7 @@ impl CompactStrings {
     /// assert!(cmpstrs.capacity_meta() > 3);
     /// ```
     #[inline]
+    #[must_use]
     pub fn capacity_meta(&self) -> usize {
         self.0.capacity_meta()
     }
@@ -401,7 +409,7 @@ impl CompactStrings {
     /// assert_eq!(cmpstrs.get(2), None);
     /// ```
     pub fn remove(&mut self, index: usize) {
-        self.0.remove(index)
+        self.0.remove(index);
     }
 
     /// Returns an iterator over the slice.
@@ -632,22 +640,14 @@ mod tests {
 mod serde {
     use serde::{
         de::{SeqAccess, Visitor},
-        ser::SerializeSeq,
         Deserialize, Deserializer, Serialize,
     };
 
     use crate::CompactStrings;
 
     impl Serialize for CompactStrings {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-        {
-            let mut seq = serializer.serialize_seq(Some(self.len()))?;
-            for bstr in self {
-                seq.serialize_element(bstr)?;
-            }
-            seq.end()
+        fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.collect_seq(self)
         }
     }
 

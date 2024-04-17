@@ -30,3 +30,8 @@ pub use compact_strings::CompactStrings;
 mod compact_bytestrings;
 pub use compact_bytestrings::CompactBytestrings;
 mod metadata;
+
+mod fixed_compact_strings;
+pub use fixed_compact_strings::FixedCompactStrings;
+mod fixed_compact_bytestrings;
+pub use fixed_compact_bytestrings::FixedCompactBytestrings;

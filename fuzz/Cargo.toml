@@ -8,8 +8,16 @@ name = "compact_strings"
 path = "src/compact_strings.rs"
 
 [[bin]]
+name = "fixed_compact_strings"
+path = "src/fixed_compact_strings.rs"
+
+[[bin]]
 name = "compact_bytestrings"
 path = "src/compact_bytestrings.rs"
+
+[[bin]]
+name = "fixed_compact_bytestrings"
+path = "src/fixed_compact_bytestrings.rs"
 
 [dependencies]
 arbitrary = "1"

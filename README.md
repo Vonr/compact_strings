@@ -21,8 +21,8 @@ This crate instead stores lists of (byte)strings as two vectors:
 2. Data - which holds the actual bytes of the (byte)strings
 
 This means that we pay an upfront cost of 6 pointer-widths compared to just 3,
-but save a pointer-width for every string after the third, in addition to 
-being able to store all strings in one fast-growing allocation.
+but have a slower growing auxiliary memory consumption of `2n + 6` compared to `3n + 3` pointer-widths,
+in addition to being able to store all strings in one fast-growing allocation.
 
 Unfortunately, this structure makes mutating (byte)strings stored in the data vector
 extremely difficult without shifting the rest of the data around.  
@@ -31,7 +31,18 @@ moving the rest of the bytes will be much higher than with a `Vec<String>`.
 
 See [benchmarks](benchmarks/BENCHMARKS.md) for more details.
 
+### New in 4.1.0
+
+This crate now has even more compact versions of the above data structures by
+getting rid of the length of the (byte)strings present in the above structures' `Metadata`.
+
+This means that we still pay an upfront cost of 6 pointer-widths rather than 3,
+but have an even slower growing auxiliary memory consumption of just `n + 6` pointer-widths.
+
+These are not expected to perform significantly differently from their older counterparts 
+and are thus not benchmarked.
+
 ## Benchmarks
 
 Some benchmarks of operations expected to perform vastly differently from their
-`Vec` equivalents have been benchmarked, you can view them [here](benchmarks/BENCHMARKS.md)
+`Vec` equivalents have been benchmarked, you can view them [here](benchmarks/BENCHMARKS.md).

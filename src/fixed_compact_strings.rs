@@ -491,7 +491,7 @@ impl<'a> Iterator for Iter<'a> {
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        Self::from_utf8_maybe_checked(self.0.nth(n)?)
+        self.0.nth(n).and_then(Self::from_utf8_maybe_checked)
     }
 
     #[inline]
@@ -507,7 +507,7 @@ impl<'a> Iterator for Iter<'a> {
     where
         Self: Sized,
     {
-        Self::from_utf8_maybe_checked(self.0.next_back()?)
+        self.0.next_back().and_then(Self::from_utf8_maybe_checked)
     }
 
     #[inline]

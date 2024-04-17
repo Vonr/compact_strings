@@ -3,7 +3,7 @@ members = ["benchmarks", "fuzz"]
 
 [package]
 name = "compact_strings"
-version = "4.1.1"
+version = "4.1.2"
 edition = "2021"
 description = "A more compact but limited representation of a list of strings or bytestrings."
 license = "MIT"

@@ -593,6 +593,32 @@ impl<'a> Iterator for Iter<'a> {
         }
     }
 
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let (start, len) = self.iter.nth(n)?.as_tuple();
+
+        if cfg!(feature = "no_unsafe") {
+            self.data.get(start..start + len)
+        } else {
+            unsafe { Some(self.data.get_unchecked(start..start + len)) }
+        }
+    }
+
+    #[inline]
+    fn count(self) -> usize
+    where
+        Self: Sized,
+    {
+        self.len()
+    }
+
+    #[inline]
+    fn last(mut self) -> Option<Self::Item>
+    where
+        Self: Sized,
+    {
+        self.next_back()
+    }
+
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
@@ -602,6 +628,16 @@ impl<'a> Iterator for Iter<'a> {
 impl<'a> DoubleEndedIterator for Iter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let (start, len) = self.iter.next_back()?.as_tuple();
+
+        if cfg!(feature = "no_unsafe") {
+            self.data.get(start..start + len)
+        } else {
+            unsafe { Some(self.data.get_unchecked(start..start + len)) }
+        }
+    }
+
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        let (start, len) = self.iter.nth_back(n)?.as_tuple();
 
         if cfg!(feature = "no_unsafe") {
             self.data.get(start..start + len)

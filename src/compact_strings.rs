@@ -521,6 +521,26 @@ impl<'a> Iterator for Iter<'a> {
         self.0.next().and_then(Self::from_utf8_maybe_checked)
     }
 
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.0.nth(n).and_then(Self::from_utf8_maybe_checked)
+    }
+
+    #[inline]
+    fn count(self) -> usize
+    where
+        Self: Sized,
+    {
+        self.len()
+    }
+
+    #[inline]
+    fn last(mut self) -> Option<Self::Item>
+    where
+        Self: Sized,
+    {
+        self.next_back()
+    }
+
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.0.size_hint()
@@ -530,6 +550,10 @@ impl<'a> Iterator for Iter<'a> {
 impl<'a> DoubleEndedIterator for Iter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.0.next_back().and_then(Self::from_utf8_maybe_checked)
+    }
+
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        self.0.nth_back(n).and_then(Self::from_utf8_maybe_checked)
     }
 }
 

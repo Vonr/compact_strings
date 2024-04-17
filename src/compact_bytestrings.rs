@@ -566,7 +566,7 @@ impl Index<usize> for CompactBytestrings {
 /// ```
 #[must_use = "Iterators are lazy and do nothing unless consumed"]
 pub struct Iter<'a> {
-    inner: &'a CompactBytestrings,
+    data: &'a [u8],
     iter: core::slice::Iter<'a, Metadata>,
 }
 
@@ -574,7 +574,7 @@ impl<'a> Iter<'a> {
     #[inline]
     pub fn new(inner: &'a CompactBytestrings) -> Self {
         Self {
-            inner,
+            data: &inner.data,
             iter: inner.meta.iter(),
         }
     }
@@ -587,9 +587,9 @@ impl<'a> Iterator for Iter<'a> {
         let (start, len) = self.iter.next()?.as_tuple();
 
         if cfg!(feature = "no_unsafe") {
-            self.inner.data.get(start..start + len)
+            self.data.get(start..start + len)
         } else {
-            unsafe { Some(self.inner.data.get_unchecked(start..start + len)) }
+            unsafe { Some(self.data.get_unchecked(start..start + len)) }
         }
     }
 
@@ -604,9 +604,9 @@ impl<'a> DoubleEndedIterator for Iter<'a> {
         let (start, len) = self.iter.next_back()?.as_tuple();
 
         if cfg!(feature = "no_unsafe") {
-            self.inner.data.get(start..start + len)
+            self.data.get(start..start + len)
         } else {
-            unsafe { Some(self.inner.data.get_unchecked(start..start + len)) }
+            unsafe { Some(self.data.get_unchecked(start..start + len)) }
         }
     }
 }
@@ -625,7 +625,7 @@ impl<'a> IntoIterator for &'a CompactBytestrings {
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter::new(self)
+        self.iter()
     }
 }
 

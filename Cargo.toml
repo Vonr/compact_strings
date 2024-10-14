@@ -27,3 +27,6 @@ no_unsafe = []
 all-features = false
 features = ["serde"]
 rustdoc-args = ["--cfg", "docsrs"]
+
+[dependencies]
+bytemuck = "1.18.0"

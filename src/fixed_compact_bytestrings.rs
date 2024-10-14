@@ -6,8 +6,10 @@ use crate::FixedCompactStrings;
 
 /// An even more compact but limited representation of a list of bytestrings.
 ///
-/// Strings are stored contiguously in a vector of bytes, with their starting indices
+/// Bytestrings are stored contiguously in a vector of bytes, with their starting indices
 /// being stored separately.
+///
+/// Bytestrings smaller than 8 bytes are stored inline in the indices.
 ///
 /// Limitations include being unable to mutate bytestrings stored in the vector.
 ///
@@ -54,7 +56,7 @@ impl FixedCompactBytestrings {
     ///
     /// - `data_capacity`: The capacity of the data vector where the bytes of the bytestrings are stored.
     /// - `capacity_meta`: The capacity of the meta vector where the starting indices
-    /// of the bytestrings are stored.
+    ///   of the bytestrings are stored.
     ///
     /// The [`FixedCompactBytestrings`] will be able to hold at least *`data_capacity`* bytes worth of bytestrings
     /// without reallocating the data vector, and at least *`capacity_meta`* of starting indices
@@ -101,11 +103,25 @@ impl FixedCompactBytestrings {
     /// assert_eq!(cmpbytes.get(2), Some(b"Three".as_slice()));
     /// assert_eq!(cmpbytes.get(3), None);
     /// ```
+    #[allow(clippy::cast_possible_truncation)]
     pub fn push<S>(&mut self, bytestring: S)
     where
         S: AsRef<[u8]>,
     {
+        const BYTES: usize = (usize::BITS / 8) as usize;
+
         let bytestr = bytestring.as_ref();
+        if bytestr.len() < BYTES {
+            let mut data = [0u8; BYTES];
+            data[0] = 0b1000_0000 | ((bytestr.len() as u8) << (u8::BITS - 4));
+            for (i, &b) in bytestr.iter().enumerate() {
+                data[i + 1] = b;
+            }
+
+            self.starts.push(bytemuck::cast::<_, usize>(data));
+            return;
+        }
+
         self.starts.push(self.data.len());
         self.data.extend_from_slice(bytestr);
     }
@@ -127,16 +143,26 @@ impl FixedCompactBytestrings {
     /// ```
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&[u8]> {
-        let &start = self.starts.get(index)?;
-        let &next = self
+        let start = self.starts.get(index)?;
+        let data = bytemuck::bytes_of(start);
+        if data[0] & 0b1000_1111 == 0b1000_0000 {
+            let len = ((data[0] & (0b111 << (u8::BITS - 4))) >> (u8::BITS - 4)) as usize;
+
+            return Some(&data[1..=len]);
+        }
+
+        let next = self
             .starts
-            .get(index.checked_add(1)?)
-            .unwrap_or(&self.data.len());
+            .iter()
+            .skip(index)
+            .copied()
+            .find(|n| bytemuck::bytes_of(n)[0] & 0b1000_1111 != 0b1000_0000)
+            .unwrap_or(self.data.len());
 
         if cfg!(feature = "no_unsafe") {
-            self.data.get(start..next)
+            self.data.get(*start..next)
         } else {
-            unsafe { Some(self.data.get_unchecked(start..next)) }
+            unsafe { Some(self.data.get_unchecked(*start..next)) }
         }
     }
 
@@ -163,9 +189,23 @@ impl FixedCompactBytestrings {
     #[must_use]
     #[cfg(not(feature = "no_unsafe"))]
     pub unsafe fn get_unchecked(&self, index: usize) -> &[u8] {
-        let start = *self.starts.get_unchecked(index);
-        let next = *self.starts.get(index + 1).unwrap_or(&self.data.len());
-        self.data.get_unchecked(start..next)
+        let start = self.starts.get_unchecked(index);
+        let data = bytemuck::bytes_of(start);
+        if data[0] & 0b1000_1111 == 0b1000_0000 {
+            let len = ((data[0] & (0b111 << (u8::BITS - 4))) >> (u8::BITS - 4)) as usize;
+
+            return &data[1..=len];
+        }
+
+        let next = self
+            .starts
+            .iter()
+            .skip(index)
+            .copied()
+            .find(|n| bytemuck::bytes_of(n)[0] & 0b1000_1111 != 0b1000_0000)
+            .unwrap_or(self.data.len());
+
+        self.data.get_unchecked(*start..next)
     }
 
     /// Returns the number of bytestrings in the [`FixedCompactBytestrings`], also referred to as its 'length'.
@@ -272,15 +312,17 @@ impl FixedCompactBytestrings {
     /// # Examples
     /// ```
     /// # use compact_strings::FixedCompactBytestrings;
-    /// let mut cmpbytes = FixedCompactBytestrings::with_capacity(20, 3);
+    /// let mut cmpbytes = FixedCompactBytestrings::with_capacity(40, 3);
     ///
-    /// cmpbytes.push(b"One");
-    /// cmpbytes.push(b"Two");
-    /// cmpbytes.push(b"Three");
+    /// // Padding used as bytestrings smaller than 8 bytes are stored inline,
+    /// // thus not affecting needed capacity.
+    /// cmpbytes.push(b"Padding One");
+    /// cmpbytes.push(b"Padding Two");
+    /// cmpbytes.push(b"Padding Three");
     ///
-    /// assert!(cmpbytes.capacity() >= 20);
+    /// assert!(cmpbytes.capacity() >= 40);
     /// cmpbytes.shrink_to_fit();
-    /// assert!(cmpbytes.capacity() >= 3);
+    /// assert!(cmpbytes.capacity() >= 26);
     /// ```
     #[inline]
     pub fn shrink_to_fit(&mut self) {
@@ -405,7 +447,19 @@ impl FixedCompactBytestrings {
 
         let inner_len = self.data.len();
         let start = self.starts.remove(index);
-        let next = *self.starts.get(index).unwrap_or(&inner_len);
+        let data = bytemuck::bytes_of(&start);
+        if data[0] & 0b1000_1111 == 0b1000_0000 {
+            return;
+        }
+
+        let next = self
+            .starts
+            .iter()
+            .skip(index)
+            .copied()
+            .find(|n| bytemuck::bytes_of(n)[0] & 0b1000_1111 != 0b1000_0000)
+            .unwrap_or(self.data.len());
+
         let len = next - start;
 
         for s in self.starts.iter_mut().skip(index) {
@@ -447,6 +501,12 @@ impl FixedCompactBytestrings {
     #[inline]
     pub fn iter(&self) -> Iter<'_> {
         Iter::new(self)
+    }
+}
+
+impl Default for FixedCompactBytestrings {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -544,24 +604,48 @@ impl<'a> Iterator for Iter<'a> {
     type Item = &'a [u8];
 
     fn next(&mut self) -> Option<Self::Item> {
-        let &start = self.starts.next()?;
-        let &end = self.starts.clone().next().unwrap_or(&self.data.len());
+        let start = self.starts.next()?;
+        let data = bytemuck::bytes_of(start);
+        if data[0] & 0b1000_1111 == 0b1000_0000 {
+            let len = ((data[0] & (0b111 << (u8::BITS - 4))) >> (u8::BITS - 4)) as usize;
+
+            return Some(&data[1..=len]);
+        }
+
+        let end = self
+            .starts
+            .clone()
+            .copied()
+            .find(|n| bytemuck::bytes_of(n)[0] & 0b1000_1111 != 0b1000_0000)
+            .unwrap_or(self.data.len());
 
         if cfg!(feature = "no_unsafe") {
-            self.data.get(start..end)
+            self.data.get(*start..end)
         } else {
-            unsafe { Some(self.data.get_unchecked(start..end)) }
+            unsafe { Some(self.data.get_unchecked(*start..end)) }
         }
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        let &start = self.starts.nth(n)?;
-        let &end = self.starts.clone().next().unwrap_or(&self.data.len());
+        let start = self.starts.nth(n)?;
+        let data = bytemuck::bytes_of(start);
+        if data[0] & 0b1000_1111 == 0b1000_0000 {
+            let len = ((data[0] & (0b111 << (u8::BITS - 4))) >> (u8::BITS - 4)) as usize;
+
+            return Some(&data[1..=len]);
+        }
+
+        let end = self
+            .starts
+            .clone()
+            .copied()
+            .find(|n| bytemuck::bytes_of(n)[0] & 0b1000_1111 != 0b1000_0000)
+            .unwrap_or(self.data.len());
 
         if cfg!(feature = "no_unsafe") {
-            self.data.get(start..end)
+            self.data.get(*start..end)
         } else {
-            unsafe { Some(self.data.get_unchecked(start..end)) }
+            unsafe { Some(self.data.get_unchecked(*start..end)) }
         }
     }
 
@@ -589,22 +673,33 @@ impl<'a> Iterator for Iter<'a> {
 
 impl<'a> DoubleEndedIterator for Iter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        let &start = self.starts.next_back()?;
-        let end = self.data.len();
+        let start = self.starts.next_back()?;
+        let data = bytemuck::bytes_of(start);
+        if data[0] & 0b1000_0000 != 0 {
+            let len = ((data[0] & (0b111 << (u8::BITS - 4))) >> (u8::BITS - 4)) as usize;
+
+            return Some(&data[1..=len]);
+        }
 
         let out = if cfg!(feature = "no_unsafe") {
-            self.data.get(start..end)
+            self.data.get(*start..)
         } else {
-            unsafe { Some(self.data.get_unchecked(start..end)) }
+            unsafe { Some(self.data.get_unchecked(*start..)) }
         };
-        self.data = &self.data[..start];
+        self.data = &self.data[..*start];
 
         out
     }
 
     fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
         let mut fork = self.starts.clone();
-        let &start = self.starts.nth_back(n)?;
+        let start = self.starts.nth_back(n)?;
+        let data = bytemuck::bytes_of(start);
+        if data[0] & 0b1000_0000 != 0 {
+            let len = ((data[0] & (0b111 << (u8::BITS - 4))) >> (u8::BITS - 4)) as usize;
+
+            return Some(&data[1..=len]);
+        }
         let end = if n == 0 {
             self.data.len()
         } else {
@@ -612,11 +707,11 @@ impl<'a> DoubleEndedIterator for Iter<'a> {
         };
 
         let out = if cfg!(feature = "no_unsafe") {
-            self.data.get(start..end)
+            self.data.get(*start..end)
         } else {
-            unsafe { Some(self.data.get_unchecked(start..end)) }
+            unsafe { Some(self.data.get_unchecked(*start..end)) }
         };
-        self.data = &self.data[..start];
+        self.data = &self.data[..*start];
 
         out
     }

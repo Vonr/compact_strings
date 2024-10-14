@@ -10,6 +10,8 @@ use crate::FixedCompactBytestrings;
 /// Strings are stored contiguously in a vector of bytes, with their starting indices
 /// being stored separately.
 ///
+/// Strings smaller than 8 bytes (UTF-8 encoded) are stored inline in the indices.
+///
 /// Limitations include being unable to mutate strings stored in the vector.
 ///
 /// # Examples
@@ -31,6 +33,12 @@ use crate::FixedCompactBytestrings;
 #[derive(Clone)]
 pub struct FixedCompactStrings(pub(crate) FixedCompactBytestrings);
 
+impl Default for FixedCompactStrings {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FixedCompactStrings {
     /// Constructs a new, empty [`FixedCompactStrings`].
     ///
@@ -51,7 +59,7 @@ impl FixedCompactStrings {
     ///
     /// - `data_capacity`: The capacity of the data vector where the bytes of the strings are stored.
     /// - `capacity_meta`: The capacity of the meta vector where the starting indices
-    /// of the strings are stored.
+    ///   of the strings are stored.
     ///
     /// The [`FixedCompactStrings`] will be able to hold at least *`data_capacity`* bytes worth of strings
     /// without reallocating the data vector, and at least *`capacity_meta`* of starting indices
@@ -260,15 +268,17 @@ impl FixedCompactStrings {
     /// # Examples
     /// ```
     /// # use compact_strings::FixedCompactStrings;
-    /// let mut cmpstrs = FixedCompactStrings::with_capacity(20, 3);
+    /// let mut cmpstrs = FixedCompactStrings::with_capacity(40, 3);
     ///
-    /// cmpstrs.push("One");
-    /// cmpstrs.push("Two");
-    /// cmpstrs.push("Three");
+    /// // Padding used as strings smaller than 8 bytes (UTF-8 encoded) are stored inline,
+    /// // thus not affecting needed capacity.
+    /// cmpstrs.push("Padding One");
+    /// cmpstrs.push("Padding Two");
+    /// cmpstrs.push("Padding Three");
     ///
-    /// assert!(cmpstrs.capacity() >= 20);
+    /// assert!(cmpstrs.capacity() >= 40);
     /// cmpstrs.shrink_to_fit();
-    /// assert!(cmpstrs.capacity() >= 3);
+    /// assert!(cmpstrs.capacity() >= 27);
     /// ```
     #[inline]
     pub fn shrink_to_fit(&mut self) {

@@ -122,7 +122,7 @@ impl FixedCompactStrings {
     /// cmpstrs.push("One");
     /// cmpstrs.push("Two");
     /// cmpstrs.push("Three");
-    /// // Cannot be stored inline as it is larger than 8 bytes
+    /// // Cannot be stored inline as it is larger than 7 bytes
     /// cmpstrs.push("Seventeen");
     ///
     /// assert_eq!(cmpstrs.get(0), Some("One"));

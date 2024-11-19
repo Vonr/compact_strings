@@ -135,7 +135,7 @@ impl FixedCompactBytestrings {
     /// cmpbytes.push(b"One");
     /// cmpbytes.push(b"Two");
     /// cmpbytes.push(b"Three");
-    /// // Cannot be stored inline as it is larger than 8 bytes
+    /// // Cannot be stored inline as it is larger than 7 bytes
     /// cmpbytes.push(b"Seventeen");
     ///
     /// assert_eq!(cmpbytes.get(0), Some(b"One".as_slice()));

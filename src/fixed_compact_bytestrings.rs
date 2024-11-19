@@ -135,11 +135,13 @@ impl FixedCompactBytestrings {
     /// cmpbytes.push(b"One");
     /// cmpbytes.push(b"Two");
     /// cmpbytes.push(b"Three");
+    /// cmpbytes.push(b"Seventeen");
     ///
     /// assert_eq!(cmpbytes.get(0), Some(b"One".as_slice()));
     /// assert_eq!(cmpbytes.get(1), Some(b"Two".as_slice()));
     /// assert_eq!(cmpbytes.get(2), Some(b"Three".as_slice()));
-    /// assert_eq!(cmpbytes.get(3), None);
+    /// assert_eq!(cmpbytes.get(3), Some(b"Seventeen".as_slice()));
+    /// assert_eq!(cmpbytes.get(4), None);
     /// ```
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&[u8]> {
@@ -154,7 +156,7 @@ impl FixedCompactBytestrings {
         let next = self
             .starts
             .iter()
-            .skip(index)
+            .skip(index + 1)
             .copied()
             .find(|n| bytemuck::bytes_of(n)[0] & 0b1000_1111 != 0b1000_0000)
             .unwrap_or(self.data.len());
@@ -200,7 +202,7 @@ impl FixedCompactBytestrings {
         let next = self
             .starts
             .iter()
-            .skip(index)
+            .skip(index + 1)
             .copied()
             .find(|n| bytemuck::bytes_of(n)[0] & 0b1000_1111 != 0b1000_0000)
             .unwrap_or(self.data.len());
@@ -455,14 +457,14 @@ impl FixedCompactBytestrings {
         let next = self
             .starts
             .iter()
-            .skip(index)
+            .skip(index + 1)
             .copied()
             .find(|n| bytemuck::bytes_of(n)[0] & 0b1000_1111 != 0b1000_0000)
             .unwrap_or(self.data.len());
 
         let len = next - start;
 
-        for s in self.starts.iter_mut().skip(index) {
+        for s in self.starts.iter_mut().skip(index + 1) {
             *s -= len;
         }
 

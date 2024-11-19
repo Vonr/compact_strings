@@ -122,11 +122,14 @@ impl FixedCompactStrings {
     /// cmpstrs.push("One");
     /// cmpstrs.push("Two");
     /// cmpstrs.push("Three");
+    /// // Cannot be stored inline as it is larger than 8 bytes
+    /// cmpstrs.push("Seventeen");
     ///
     /// assert_eq!(cmpstrs.get(0), Some("One"));
     /// assert_eq!(cmpstrs.get(1), Some("Two"));
     /// assert_eq!(cmpstrs.get(2), Some("Three"));
-    /// assert_eq!(cmpstrs.get(3), None);
+    /// assert_eq!(cmpstrs.get(3), Some("Seventeen"));
+    /// assert_eq!(cmpstrs.get(4), None);
     /// ```
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&str> {

@@ -117,6 +117,7 @@ impl FixedCompactBytestrings {
             for (i, &b) in bytestr.iter().enumerate() {
                 data[i + 1] = b;
             }
+            eprintln!("{bytestr:?} -> {data:?} {} {BYTES}", bytestr.len());
 
             self.starts.push(bytemuck::cast::<_, usize>(data));
             return;
@@ -161,6 +162,7 @@ impl FixedCompactBytestrings {
             .copied()
             .find(|n| bytemuck::bytes_of(n)[0] & 0b1000_1111 != 0b1000_0000)
             .unwrap_or(self.data.len());
+        eprintln!("{start}..{next} / {}", self.data.len());
 
         if cfg!(feature = "no_unsafe") {
             self.data.get(*start..next)
@@ -674,7 +676,7 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for Iter<'a> {
+impl DoubleEndedIterator for Iter<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let start = self.starts.next_back()?;
         let data = bytemuck::bytes_of(start);
@@ -815,5 +817,94 @@ mod tests {
         assert_eq!(iter.next_back(), Some(b"Three".as_slice()));
         assert_eq!(iter.next(), None);
         assert_eq!(iter.next_back(), None);
+    }
+
+    #[test]
+    fn packages() {
+        let mut fixed = FixedCompactBytestrings::new();
+
+        for package in [
+            "acl",
+            "amd-ucode",
+            "archlinux-keyring",
+            "argon2",
+            "attr",
+            "audit",
+            "autoconf",
+            "automake",
+            "b43-fwcutter",
+            "base",
+            "base-devel",
+            "bash",
+            "binutils",
+            "bison",
+            "brotli",
+            "brotli-testdata",
+            "btrfs-progs",
+            "bzip2",
+            "ca-certificates",
+            "ca-certificates-mozilla",
+            "ca-certificates-utils",
+            "coreutils",
+            "cracklib",
+            "cryptsetup",
+            "curl",
+            "dash",
+            "db",
+            "db5.3",
+            "dbus",
+            "dbus-broker",
+            "dbus-broker-units",
+            "dbus-daemon-units",
+            "dbus-docs",
+            "dbus-units",
+            "debugedit",
+            "debuginfod",
+            "device-mapper",
+            "dialog",
+            "diffutils",
+            "ding-libs",
+            "dmraid",
+            "dnssec-anchors",
+            "dosfstools",
+            "e2fsprogs",
+            "efibootmgr",
+            "efivar",
+            "elfutils",
+            "expat",
+            "fakeroot",
+            "file",
+            "filesystem",
+            "findutils",
+            "flex",
+            "fuse2fs",
+            "gawk",
+            "gc",
+            "gcc",
+            "gcc-ada",
+            "gcc-d",
+            "gcc-fortran",
+            "gcc-go",
+            "gcc-libs",
+            "gcc-m2",
+            "gcc-objc",
+            "gcc-rust",
+            "gdbm",
+            "gettext",
+            "glib2",
+            "glib2-devel",
+            "glib2-docs",
+            "glibc",
+            "glibc-locales",
+        ] {
+            let begin = fixed.data.len();
+            fixed.push(package.as_bytes());
+            assert_eq!(
+                fixed.get(fixed.len() - 1),
+                Some(package.as_bytes()),
+                "package {package:?} not equal at pos {begin}..{}",
+                fixed.data.len()
+            );
+        }
     }
 }

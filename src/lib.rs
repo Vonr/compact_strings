@@ -20,7 +20,7 @@
 //! assert_eq!(cmpstrs.get(1), Some("Three"));
 //! assert_eq!(cmpstrs.get(2), None);
 //! ```
-#![no_std]
+//#![no_std]
 #![warn(clippy::pedantic)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 extern crate alloc;

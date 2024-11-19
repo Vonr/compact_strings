@@ -8,17 +8,15 @@ perfect. For example, the removal benchmarks also include the timing to
 re-add elements to prevent the benchmark from exhausting the elements.
 
 Furthermore, all the elements are of the same length and may lead to
-favourable results for some of the data structures being benchmarked.
-When pre-fixed with "-hello", all elements are "hello" - which is able
-to fit in the 7 bytes of inline storage in the FixedCompact\* structures,
-when pre-fixed with "-sphinx", all elements are "sphinx of black quartz,
-judge my vow" - which are too long to fit into the 7 bytes of inline
-storage.
+favourable results for one of the data structures being benchmarked.
 
 Should you have ideas on how to better benchmark this, a pull request
 would be greatly appreciated.
 
 Row values, if any, indicate the number of (byte)strings in the list.
+
+In order to reduce variance, I've chosen to populate each list with
+"lorem ipsum dolor sit amet consectetur adipisci".
 
 There may be performance implications, as the `Vec` structures likely
 prefer larger (byte)strings while the chosen (byte)string is relatively small.
@@ -57,8 +55,8 @@ The structures provided by this crate are expected to perform *significantly* wo
 on this benchmark as all (byte)strings stored after the removed element need to
 be shifted, causing a large reallocation.
 
-The non-fixed structures provide the `ignore` method which only removes the metadata to combat
-this at the cost of stale memory.
+The API provides the `ignore` method which only removes the metadata to combat this
+at the cost of stale memory.
 
 This benchmark is intentionally biased against the structures provided by this crate
 in order to demonstrate pathological behaviour.

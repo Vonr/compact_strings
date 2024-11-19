@@ -31,12 +31,6 @@ use crate::CompactBytestrings;
 #[derive(Clone)]
 pub struct CompactStrings(pub(crate) CompactBytestrings);
 
-impl Default for CompactStrings {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl CompactStrings {
     /// Constructs a new, empty [`CompactStrings`].
     ///
@@ -57,7 +51,7 @@ impl CompactStrings {
     ///
     /// - `data_capacity`: The capacity of the data vector where the bytes of the strings are stored.
     /// - `capacity_meta`: The capacity of the meta vector where the starting indices and lengths
-    ///   of the strings are stored.
+    /// of the strings are stored.
     ///
     /// The [`CompactStrings`] will be able to hold at least *`data_capacity`* bytes worth of strings
     /// without reallocating the data vector, and at least *`capacity_meta`* of starting indices and

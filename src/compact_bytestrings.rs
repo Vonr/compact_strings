@@ -6,7 +6,7 @@ use crate::{metadata::Metadata, CompactStrings};
 
 /// A more compact but limited representation of a list of bytestrings.
 ///
-/// Bytestrings are stored contiguously in a vector of bytes, with their lengths and starting indices
+/// Strings are stored contiguously in a vector of bytes, with their lengths and starting indices
 /// being stored separately.
 ///
 /// Limitations include being unable to mutate bytestrings stored in the vector.
@@ -29,12 +29,6 @@ use crate::{metadata::Metadata, CompactStrings};
 pub struct CompactBytestrings {
     pub(crate) data: Vec<u8>,
     pub(crate) meta: Vec<Metadata>,
-}
-
-impl Default for CompactBytestrings {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl CompactBytestrings {
@@ -60,7 +54,7 @@ impl CompactBytestrings {
     ///
     /// - `data_capacity`: The capacity of the data vector where the bytes of the bytestrings are stored.
     /// - `capacity_meta`: The capacity of the meta vector where the starting indices and lengths
-    ///   of the bytestrings are stored.
+    /// of the bytestrings are stored.
     ///
     /// The [`CompactBytestrings`] will be able to hold at least *`data_capacity`* bytes worth of bytestrings
     /// without reallocating the data vector, and at least *`capacity_meta`* of starting indices and

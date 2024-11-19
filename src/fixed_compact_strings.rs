@@ -10,8 +10,6 @@ use crate::FixedCompactBytestrings;
 /// Strings are stored contiguously in a vector of bytes, with their starting indices
 /// being stored separately.
 ///
-/// Strings smaller than 8 bytes (UTF-8 encoded) are stored inline in the indices.
-///
 /// Limitations include being unable to mutate strings stored in the vector.
 ///
 /// # Examples
@@ -33,12 +31,6 @@ use crate::FixedCompactBytestrings;
 #[derive(Clone)]
 pub struct FixedCompactStrings(pub(crate) FixedCompactBytestrings);
 
-impl Default for FixedCompactStrings {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl FixedCompactStrings {
     /// Constructs a new, empty [`FixedCompactStrings`].
     ///
@@ -59,7 +51,7 @@ impl FixedCompactStrings {
     ///
     /// - `data_capacity`: The capacity of the data vector where the bytes of the strings are stored.
     /// - `capacity_meta`: The capacity of the meta vector where the starting indices
-    ///   of the strings are stored.
+    /// of the strings are stored.
     ///
     /// The [`FixedCompactStrings`] will be able to hold at least *`data_capacity`* bytes worth of strings
     /// without reallocating the data vector, and at least *`capacity_meta`* of starting indices
@@ -122,14 +114,11 @@ impl FixedCompactStrings {
     /// cmpstrs.push("One");
     /// cmpstrs.push("Two");
     /// cmpstrs.push("Three");
-    /// // Cannot be stored inline as it is larger than 7 bytes
-    /// cmpstrs.push("Seventeen");
     ///
     /// assert_eq!(cmpstrs.get(0), Some("One"));
     /// assert_eq!(cmpstrs.get(1), Some("Two"));
     /// assert_eq!(cmpstrs.get(2), Some("Three"));
-    /// assert_eq!(cmpstrs.get(3), Some("Seventeen"));
-    /// assert_eq!(cmpstrs.get(4), None);
+    /// assert_eq!(cmpstrs.get(3), None);
     /// ```
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&str> {
@@ -271,17 +260,15 @@ impl FixedCompactStrings {
     /// # Examples
     /// ```
     /// # use compact_strings::FixedCompactStrings;
-    /// let mut cmpstrs = FixedCompactStrings::with_capacity(40, 3);
+    /// let mut cmpstrs = FixedCompactStrings::with_capacity(20, 3);
     ///
-    /// // Padding used as strings smaller than 8 bytes (UTF-8 encoded) are stored inline,
-    /// // thus not affecting needed capacity.
-    /// cmpstrs.push("Padding One");
-    /// cmpstrs.push("Padding Two");
-    /// cmpstrs.push("Padding Three");
+    /// cmpstrs.push("One");
+    /// cmpstrs.push("Two");
+    /// cmpstrs.push("Three");
     ///
-    /// assert!(cmpstrs.capacity() >= 40);
+    /// assert!(cmpstrs.capacity() >= 20);
     /// cmpstrs.shrink_to_fit();
-    /// assert!(cmpstrs.capacity() >= 27);
+    /// assert!(cmpstrs.capacity() >= 3);
     /// ```
     #[inline]
     pub fn shrink_to_fit(&mut self) {
